@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -17,8 +17,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<template #icon>
 							<i v-if="webhook.active === false" class="ti ti-player-pause"></i>
 							<i v-else-if="webhook.latestStatus === null" class="ti ti-circle"></i>
-							<i v-else-if="[200, 201, 204].includes(webhook.latestStatus)" class="ti ti-check" :style="{ color: 'var(--success)' }"></i>
-							<i v-else class="ti ti-alert-triangle" :style="{ color: 'var(--error)' }"></i>
+							<i v-else-if="[200, 201, 204].includes(webhook.latestStatus)" class="ti ti-check" :style="{ color: 'var(--MI_THEME-success)' }"></i>
+							<i v-else class="ti ti-alert-triangle" :style="{ color: 'var(--MI_THEME-error)' }"></i>
 						</template>
 						{{ webhook.name || webhook.url }}
 						<template #suffix>
@@ -50,8 +50,8 @@ const headerActions = computed(() => []);
 
 const headerTabs = computed(() => []);
 
-definePageMetadata({
+definePageMetadata(() => ({
 	title: 'Webhook',
 	icon: 'ti ti-webhook',
-});
+}));
 </script>

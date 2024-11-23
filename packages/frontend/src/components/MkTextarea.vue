@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -17,7 +17,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:readonly="readonly"
 			:placeholder="placeholder"
 			:pattern="pattern"
-			:autocomplete="props.autocomplete"
+			:autocomplete="autocomplete"
 			:spellcheck="spellcheck"
 			@focus="focused = true"
 			@blur="focused = false"
@@ -76,9 +76,9 @@ const invalid = ref(false);
 const filled = computed(() => v.value !== '' && v.value != null);
 const inputEl = shallowRef<HTMLTextAreaElement>();
 const preview = ref(false);
-let autocomplete: Autocomplete;
+let autocompleteWorker: Autocomplete | null = null;
 
-const focus = () => inputEl.value.focus();
+const focus = () => inputEl.value?.focus();
 const onInput = (ev) => {
 	changed.value = true;
 	emit('change', ev);
@@ -111,10 +111,10 @@ const updated = () => {
 const debouncedUpdated = debounce(1000, updated);
 
 watch(modelValue, newValue => {
-	v.value = newValue;
+	v.value = newValue ?? '';
 });
 
-watch(v, newValue => {
+watch(v, () => {
 	if (!props.manualSave) {
 		if (props.debounce) {
 			debouncedUpdated();
@@ -123,7 +123,7 @@ watch(v, newValue => {
 		}
 	}
 
-	invalid.value = inputEl.value.validity.badInput;
+	invalid.value = inputEl.value?.validity.badInput ?? true;
 });
 
 onMounted(() => {
@@ -133,14 +133,14 @@ onMounted(() => {
 		}
 	});
 
-	if (props.mfmAutocomplete) {
-		autocomplete = new Autocomplete(inputEl.value, v, props.mfmAutocomplete === true ? null : props.mfmAutocomplete);
+	if (props.mfmAutocomplete && inputEl.value) {
+		autocompleteWorker = new Autocomplete(inputEl.value, v, props.mfmAutocomplete === true ? undefined : props.mfmAutocomplete);
 	}
 });
 
 onUnmounted(() => {
-	if (autocomplete) {
-		autocomplete.detach();
+	if (autocompleteWorker) {
+		autocompleteWorker.detach();
 	}
 });
 </script>
@@ -159,7 +159,7 @@ onUnmounted(() => {
 .caption {
 	font-size: 0.85em;
 	padding: 8px 0 0 0;
-	color: var(--fgTransparentWeak);
+	color: var(--MI_THEME-fgTransparentWeak);
 
 	&:empty {
 		display: none;
@@ -179,9 +179,9 @@ onUnmounted(() => {
 	font: inherit;
 	font-weight: normal;
 	font-size: 1em;
-	color: var(--fg);
-	background: var(--panel);
-	border: solid 1px var(--panel);
+	color: var(--MI_THEME-fg);
+	background: var(--MI_THEME-panel);
+	border: solid 1px var(--MI_THEME-panel);
 	border-radius: 6px;
 	outline: none;
 	box-shadow: none;
@@ -189,13 +189,13 @@ onUnmounted(() => {
 	transition: border-color 0.1s ease-out;
 
 	&:hover {
-		border-color: var(--inputBorderHover) !important;
+		border-color: var(--MI_THEME-inputBorderHover) !important;
 	}
 }
 
 .focused {
 	> .textarea {
-		border-color: var(--accent) !important;
+		border-color: var(--MI_THEME-accent) !important;
 	}
 }
 
@@ -226,7 +226,7 @@ onUnmounted(() => {
 
 .mfmPreview {
   padding: 12px;
-  border-radius: var(--radius);
+  border-radius: var(--MI-radius);
   box-sizing: border-box;
   min-height: 130px;
 	pointer-events: none;

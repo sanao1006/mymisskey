@@ -1,14 +1,23 @@
 /*
- * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-FileCopyrightText: syuilo and misskey-project
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { Schema } from '@/misc/json-schema.js';
 import { permissions } from 'misskey-js';
-import { RolePolicies } from '@/core/RoleService.js';
+import type { KeyOf, Schema } from '@/misc/json-schema.js';
 
-import * as ep___admin_meta from './endpoints/admin/meta.js';
+import * as ep___admin_abuseReport_notificationRecipient_list
+	from '@/server/api/endpoints/admin/abuse-report/notification-recipient/list.js';
+import * as ep___admin_abuseReport_notificationRecipient_show
+	from '@/server/api/endpoints/admin/abuse-report/notification-recipient/show.js';
+import * as ep___admin_abuseReport_notificationRecipient_create
+	from '@/server/api/endpoints/admin/abuse-report/notification-recipient/create.js';
+import * as ep___admin_abuseReport_notificationRecipient_update
+	from '@/server/api/endpoints/admin/abuse-report/notification-recipient/update.js';
+import * as ep___admin_abuseReport_notificationRecipient_delete
+	from '@/server/api/endpoints/admin/abuse-report/notification-recipient/delete.js';
 import * as ep___admin_abuseUserReports from './endpoints/admin/abuse-user-reports.js';
+import * as ep___admin_meta from './endpoints/admin/meta.js';
 import * as ep___admin_accounts_create from './endpoints/admin/accounts/create.js';
 import * as ep___admin_accounts_delete from './endpoints/admin/accounts/delete.js';
 import * as ep___admin_accounts_findByEmail from './endpoints/admin/accounts/find-by-email.js';
@@ -45,7 +54,8 @@ import * as ep___admin_emoji_setCategoryBulk from './endpoints/admin/emoji/set-c
 import * as ep___admin_emoji_setLicenseBulk from './endpoints/admin/emoji/set-license-bulk.js';
 import * as ep___admin_emoji_update from './endpoints/admin/emoji/update.js';
 import * as ep___admin_federation_deleteAllFiles from './endpoints/admin/federation/delete-all-files.js';
-import * as ep___admin_federation_refreshRemoteInstanceMetadata from './endpoints/admin/federation/refresh-remote-instance-metadata.js';
+import * as ep___admin_federation_refreshRemoteInstanceMetadata
+	from './endpoints/admin/federation/refresh-remote-instance-metadata.js';
 import * as ep___admin_federation_removeAllFollowing from './endpoints/admin/federation/remove-all-following.js';
 import * as ep___admin_federation_updateInstance from './endpoints/admin/federation/update-instance.js';
 import * as ep___admin_getIndexStats from './endpoints/admin/get-index-stats.js';
@@ -64,6 +74,8 @@ import * as ep___admin_relays_list from './endpoints/admin/relays/list.js';
 import * as ep___admin_relays_remove from './endpoints/admin/relays/remove.js';
 import * as ep___admin_resetPassword from './endpoints/admin/reset-password.js';
 import * as ep___admin_resolveAbuseUserReport from './endpoints/admin/resolve-abuse-user-report.js';
+import * as ep___admin_forwardAbuseUserReport from './endpoints/admin/forward-abuse-user-report.js';
+import * as ep___admin_updateAbuseUserReport from './endpoints/admin/update-abuse-user-report.js';
 import * as ep___admin_sendEmail from './endpoints/admin/send-email.js';
 import * as ep___admin_serverInfo from './endpoints/admin/server-info.js';
 import * as ep___admin_showModerationLogs from './endpoints/admin/show-moderation-logs.js';
@@ -83,7 +95,14 @@ import * as ep___admin_roles_assign from './endpoints/admin/roles/assign.js';
 import * as ep___admin_roles_unassign from './endpoints/admin/roles/unassign.js';
 import * as ep___admin_roles_updateDefaultPolicies from './endpoints/admin/roles/update-default-policies.js';
 import * as ep___admin_roles_users from './endpoints/admin/roles/users.js';
+import * as ep___admin_systemWebhook_create from './endpoints/admin/system-webhook/create.js';
+import * as ep___admin_systemWebhook_delete from './endpoints/admin/system-webhook/delete.js';
+import * as ep___admin_systemWebhook_list from './endpoints/admin/system-webhook/list.js';
+import * as ep___admin_systemWebhook_show from './endpoints/admin/system-webhook/show.js';
+import * as ep___admin_systemWebhook_update from './endpoints/admin/system-webhook/update.js';
+import * as ep___admin_systemWebhook_test from './endpoints/admin/system-webhook/test.js';
 import * as ep___announcements from './endpoints/announcements.js';
+import * as ep___announcements_show from './endpoints/announcements/show.js';
 import * as ep___antennas_create from './endpoints/antennas/create.js';
 import * as ep___antennas_delete from './endpoints/antennas/delete.js';
 import * as ep___antennas_list from './endpoints/antennas/list.js';
@@ -174,6 +193,7 @@ import * as ep___following_invalidate from './endpoints/following/invalidate.js'
 import * as ep___following_requests_accept from './endpoints/following/requests/accept.js';
 import * as ep___following_requests_cancel from './endpoints/following/requests/cancel.js';
 import * as ep___following_requests_list from './endpoints/following/requests/list.js';
+import * as ep___following_requests_sent from './endpoints/following/requests/sent.js';
 import * as ep___following_requests_reject from './endpoints/following/requests/reject.js';
 import * as ep___gallery_featured from './endpoints/gallery/featured.js';
 import * as ep___gallery_popular from './endpoints/gallery/popular.js';
@@ -209,6 +229,7 @@ import * as ep___i_exportBlocking from './endpoints/i/export-blocking.js';
 import * as ep___i_exportFollowing from './endpoints/i/export-following.js';
 import * as ep___i_exportMute from './endpoints/i/export-mute.js';
 import * as ep___i_exportNotes from './endpoints/i/export-notes.js';
+import * as ep___i_exportClips from './endpoints/i/export-clips.js';
 import * as ep___i_exportFavorites from './endpoints/i/export-favorites.js';
 import * as ep___i_exportUserLists from './endpoints/i/export-user-lists.js';
 import * as ep___i_exportAntennas from './endpoints/i/export-antennas.js';
@@ -247,6 +268,7 @@ import * as ep___i_webhooks_show from './endpoints/i/webhooks/show.js';
 import * as ep___i_webhooks_list from './endpoints/i/webhooks/list.js';
 import * as ep___i_webhooks_update from './endpoints/i/webhooks/update.js';
 import * as ep___i_webhooks_delete from './endpoints/i/webhooks/delete.js';
+import * as ep___i_webhooks_test from './endpoints/i/webhooks/test.js';
 import * as ep___invite_create from './endpoints/invite/create.js';
 import * as ep___invite_delete from './endpoints/invite/delete.js';
 import * as ep___invite_list from './endpoints/invite/list.js';
@@ -293,6 +315,7 @@ import * as ep___notes_translate from './endpoints/notes/translate.js';
 import * as ep___notes_unrenote from './endpoints/notes/unrenote.js';
 import * as ep___notes_userListTimeline from './endpoints/notes/user-list-timeline.js';
 import * as ep___notifications_create from './endpoints/notifications/create.js';
+import * as ep___notifications_flush from './endpoints/notifications/flush.js';
 import * as ep___notifications_markAllAsRead from './endpoints/notifications/mark-all-as-read.js';
 import * as ep___notifications_testNotification from './endpoints/notifications/test-notification.js';
 import * as ep___pagePush from './endpoints/page-push.js';
@@ -364,10 +387,24 @@ import * as ep___users_updateMemo from './endpoints/users/update-memo.js';
 import * as ep___fetchRss from './endpoints/fetch-rss.js';
 import * as ep___fetchExternalResources from './endpoints/fetch-external-resources.js';
 import * as ep___retention from './endpoints/retention.js';
+import * as ep___bubbleGame_register from './endpoints/bubble-game/register.js';
+import * as ep___bubbleGame_ranking from './endpoints/bubble-game/ranking.js';
+import * as ep___reversi_cancelMatch from './endpoints/reversi/cancel-match.js';
+import * as ep___reversi_games from './endpoints/reversi/games.js';
+import * as ep___reversi_match from './endpoints/reversi/match.js';
+import * as ep___reversi_invitations from './endpoints/reversi/invitations.js';
+import * as ep___reversi_showGame from './endpoints/reversi/show-game.js';
+import * as ep___reversi_surrender from './endpoints/reversi/surrender.js';
+import * as ep___reversi_verify from './endpoints/reversi/verify.js';
 
 const eps = [
 	['admin/meta', ep___admin_meta],
 	['admin/abuse-user-reports', ep___admin_abuseUserReports],
+	['admin/abuse-report/notification-recipient/list', ep___admin_abuseReport_notificationRecipient_list],
+	['admin/abuse-report/notification-recipient/show', ep___admin_abuseReport_notificationRecipient_show],
+	['admin/abuse-report/notification-recipient/create', ep___admin_abuseReport_notificationRecipient_create],
+	['admin/abuse-report/notification-recipient/update', ep___admin_abuseReport_notificationRecipient_update],
+	['admin/abuse-report/notification-recipient/delete', ep___admin_abuseReport_notificationRecipient_delete],
 	['admin/accounts/create', ep___admin_accounts_create],
 	['admin/accounts/delete', ep___admin_accounts_delete],
 	['admin/accounts/find-by-email', ep___admin_accounts_findByEmail],
@@ -423,6 +460,8 @@ const eps = [
 	['admin/relays/remove', ep___admin_relays_remove],
 	['admin/reset-password', ep___admin_resetPassword],
 	['admin/resolve-abuse-user-report', ep___admin_resolveAbuseUserReport],
+	['admin/forward-abuse-user-report', ep___admin_forwardAbuseUserReport],
+	['admin/update-abuse-user-report', ep___admin_updateAbuseUserReport],
 	['admin/send-email', ep___admin_sendEmail],
 	['admin/server-info', ep___admin_serverInfo],
 	['admin/show-moderation-logs', ep___admin_showModerationLogs],
@@ -442,7 +481,14 @@ const eps = [
 	['admin/roles/unassign', ep___admin_roles_unassign],
 	['admin/roles/update-default-policies', ep___admin_roles_updateDefaultPolicies],
 	['admin/roles/users', ep___admin_roles_users],
+	['admin/system-webhook/create', ep___admin_systemWebhook_create],
+	['admin/system-webhook/delete', ep___admin_systemWebhook_delete],
+	['admin/system-webhook/list', ep___admin_systemWebhook_list],
+	['admin/system-webhook/show', ep___admin_systemWebhook_show],
+	['admin/system-webhook/update', ep___admin_systemWebhook_update],
+	['admin/system-webhook/test', ep___admin_systemWebhook_test],
 	['announcements', ep___announcements],
+	['announcements/show', ep___announcements_show],
 	['antennas/create', ep___antennas_create],
 	['antennas/delete', ep___antennas_delete],
 	['antennas/list', ep___antennas_list],
@@ -533,6 +579,7 @@ const eps = [
 	['following/requests/accept', ep___following_requests_accept],
 	['following/requests/cancel', ep___following_requests_cancel],
 	['following/requests/list', ep___following_requests_list],
+	['following/requests/sent', ep___following_requests_sent],
 	['following/requests/reject', ep___following_requests_reject],
 	['gallery/featured', ep___gallery_featured],
 	['gallery/popular', ep___gallery_popular],
@@ -568,6 +615,7 @@ const eps = [
 	['i/export-following', ep___i_exportFollowing],
 	['i/export-mute', ep___i_exportMute],
 	['i/export-notes', ep___i_exportNotes],
+	['i/export-clips', ep___i_exportClips],
 	['i/export-favorites', ep___i_exportFavorites],
 	['i/export-user-lists', ep___i_exportUserLists],
 	['i/export-antennas', ep___i_exportAntennas],
@@ -606,6 +654,7 @@ const eps = [
 	['i/webhooks/show', ep___i_webhooks_show],
 	['i/webhooks/update', ep___i_webhooks_update],
 	['i/webhooks/delete', ep___i_webhooks_delete],
+	['i/webhooks/test', ep___i_webhooks_test],
 	['invite/create', ep___invite_create],
 	['invite/delete', ep___invite_delete],
 	['invite/list', ep___invite_list],
@@ -652,6 +701,7 @@ const eps = [
 	['notes/unrenote', ep___notes_unrenote],
 	['notes/user-list-timeline', ep___notes_userListTimeline],
 	['notifications/create', ep___notifications_create],
+	['notifications/flush', ep___notifications_flush],
 	['notifications/mark-all-as-read', ep___notifications_markAllAsRead],
 	['notifications/test-notification', ep___notifications_testNotification],
 	['page-push', ep___pagePush],
@@ -723,6 +773,15 @@ const eps = [
 	['fetch-rss', ep___fetchRss],
 	['fetch-external-resources', ep___fetchExternalResources],
 	['retention', ep___retention],
+	['bubble-game/register', ep___bubbleGame_register],
+	['bubble-game/ranking', ep___bubbleGame_ranking],
+	['reversi/cancel-match', ep___reversi_cancelMatch],
+	['reversi/games', ep___reversi_games],
+	['reversi/match', ep___reversi_match],
+	['reversi/invitations', ep___reversi_invitations],
+	['reversi/show-game', ep___reversi_showGame],
+	['reversi/surrender', ep___reversi_surrender],
+	['reversi/verify', ep___reversi_verify],
 ];
 
 interface IEndpointMetaBase {
@@ -756,7 +815,7 @@ interface IEndpointMetaBase {
 	 */
 	readonly requireAdmin?: boolean;
 
-	readonly requireRolePolicy?: keyof RolePolicies;
+	readonly requireRolePolicy?: KeyOf<'RolePolicies'>;
 
 	/**
 	 * 引っ越し済みのユーザーによるリクエストを禁止するか
@@ -850,8 +909,12 @@ export interface IEndpoint {
 const endpoints: IEndpoint[] = (eps as [string, any]).map(([name, ep]) => {
 	return {
 		name: name,
-		get meta() { return ep.meta ?? {}; },
-		get params() { return ep.paramDef; },
+		get meta() {
+			return ep.meta ?? {};
+		},
+		get params() {
+			return ep.paramDef;
+		},
 	};
 });
 

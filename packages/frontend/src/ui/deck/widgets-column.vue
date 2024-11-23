@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -57,10 +57,10 @@ const menu = [{
 
 <style lang="scss" module>
 .root {
-	--margin: 8px;
-	--panelBorder: none;
+	--MI-margin: 8px;
+	--MI_THEME-panelBorder: none;
 
-	padding: 0 var(--margin);
+	padding: 0 var(--MI-margin);
 }
 
 .intro {

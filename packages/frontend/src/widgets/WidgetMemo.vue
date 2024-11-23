@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -84,10 +84,10 @@ defineExpose<WidgetComponentExpose>({
 	max-width: 100%;
 	min-width: 100%;
 	padding: 16px;
-	color: var(--fg);
+	color: var(--MI_THEME-fg);
 	background: transparent;
 	border: none;
-	border-bottom: solid 0.5px var(--divider);
+	border-bottom: solid 0.5px var(--MI_THEME-divider);
 	border-radius: 0;
 	box-sizing: border-box;
 	font: inherit;

@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -36,14 +36,14 @@ function close() {
   align-items: center;
 	padding: 12px 14px;
 	font-size: 90%;
-	background: var(--infoBg);
-	color: var(--infoFg);
-	border-radius: var(--radius);
+	background: var(--MI_THEME-infoBg);
+	color: var(--MI_THEME-infoFg);
+	border-radius: var(--MI-radius);
 	white-space: pre-wrap;
 
 	&.warn {
-		background: var(--infoWarnBg);
-		color: var(--infoWarnFg);
+		background: var(--MI_THEME-infoWarnBg);
+		color: var(--MI_THEME-infoWarnFg);
 	}
 }
 

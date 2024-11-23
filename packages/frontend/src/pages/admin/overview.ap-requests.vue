@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -23,7 +23,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { onMounted, shallowRef, ref } from 'vue';
 import { Chart } from 'chart.js';
 import gradient from 'chartjs-plugin-gradient';
-import * as os from '@/os.js';
+import isChromatic from 'chromatic';
+import { misskeyApi } from '@/scripts/misskey-api.js';
 import { useChartTooltip } from '@/scripts/use-chart-tooltip.js';
 import { chartVLine } from '@/scripts/chart-vline.js';
 import { defaultStore } from '@/store.js';
@@ -41,7 +42,7 @@ const { handler: externalTooltipHandler } = useChartTooltip();
 const { handler: externalTooltipHandler2 } = useChartTooltip();
 
 onMounted(async () => {
-	const now = new Date();
+	const now = isChromatic() ? new Date('2024-08-31T10:00:00Z') : new Date();
 
 	const getDate = (ago: number) => {
 		const y = now.getFullYear();
@@ -51,21 +52,21 @@ onMounted(async () => {
 		return new Date(y, m, d - ago);
 	};
 
-	const format = (arr) => {
+	const format = (arr: number[]) => {
 		return arr.map((v, i) => ({
 			x: getDate(i).getTime(),
 			y: v,
 		}));
 	};
 
-	const formatMinus = (arr) => {
+	const formatMinus = (arr: number[]) => {
 		return arr.map((v, i) => ({
 			x: getDate(i).getTime(),
 			y: -v,
 		}));
 	};
 
-	const raw = await os.api('charts/ap-request', { limit: chartLimit, span: 'day' });
+	const raw = await misskeyApi('charts/ap-request', { limit: chartLimit, span: 'day' });
 
 	const vLineColor = defaultStore.state.darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
 	const succColor = '#87e000';
@@ -78,7 +79,6 @@ onMounted(async () => {
 		type: 'line',
 		data: {
 			datasets: [{
-				stack: 'a',
 				parsing: false,
 				label: 'Out: Succ',
 				data: format(raw.deliverSucceeded).slice().reverse(),
@@ -92,7 +92,6 @@ onMounted(async () => {
 				fill: true,
 				clip: 8,
 			}, {
-				stack: 'a',
 				parsing: false,
 				label: 'Out: Fail',
 				data: formatMinus(raw.deliverFailed).slice().reverse(),
@@ -137,7 +136,6 @@ onMounted(async () => {
 					min: getDate(chartLimit).getTime(),
 				},
 				y: {
-					stacked: true,
 					position: 'left',
 					suggestedMax: 10,
 					grid: {
@@ -171,6 +169,9 @@ onMounted(async () => {
 						duration: 0,
 					},
 					external: externalTooltipHandler,
+					callbacks: {
+						label: context => `${context.dataset.label}: ${Math.abs(context.parsed.y)}`,
+					},
 				},
 				gradient,
 			},
@@ -277,7 +278,7 @@ onMounted(async () => {
 				padding: 16px;
 
 				&:first-child {
-					border-bottom: solid 0.5px var(--divider);
+					border-bottom: solid 0.5px var(--MI_THEME-divider);
 				}
 			}
 		}

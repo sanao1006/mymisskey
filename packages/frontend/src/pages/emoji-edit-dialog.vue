@@ -1,20 +1,22 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<MkModalWindow
-	ref="dialog"
-	:width="400"
-	@close="dialog.close()"
-	@closed="$emit('closed')"
+<MkWindow
+	ref="windowEl"
+	:initialWidth="400"
+	:initialHeight="500"
+	:canResize="true"
+	@close="windowEl?.close()"
+	@closed="emit('closed')"
 >
 	<template v-if="emoji" #header>:{{ emoji.name }}:</template>
 	<template v-else #header>New emoji</template>
 
-	<div>
-		<MkSpacer :marginMin="20" :marginMax="28">
+	<div style="display: flex; flex-direction: column; min-height: 100%;">
+		<MkSpacer :marginMin="20" :marginMax="28" style="flex-grow: 1;">
 			<div class="_gaps_m">
 				<div v-if="imgUrl != null" :class="$style.imgs">
 					<div style="background: #000;" :class="$style.imgContainer">
@@ -39,9 +41,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</MkInput>
 				<MkInput v-model="aliases" autocapitalize="off">
 					<template #label>{{ i18n.ts.tags }}</template>
-					<template #caption>{{ i18n.ts.setMultipleBySeparatingWithSpace }}</template>
+					<template #caption>
+						{{ i18n.ts.theKeywordWhenSearchingForCustomEmoji }}<br/>
+						{{ i18n.ts.setMultipleBySeparatingWithSpace }}
+					</template>
 				</MkInput>
-				<MkInput v-model="license">
+				<MkInput v-model="license" :mfmAutocomplete="true">
 					<template #label>{{ i18n.ts.license }}</template>
 				</MkInput>
 				<MkFolder>
@@ -70,18 +75,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<MkButton primary rounded style="margin: 0 auto;" @click="done"><i class="ti ti-check"></i> {{ props.emoji ? i18n.ts.update : i18n.ts.create }}</MkButton>
 		</div>
 	</div>
-</MkModalWindow>
+</MkWindow>
 </template>
 
 <script lang="ts" setup>
 import { computed, watch, ref } from 'vue';
 import * as Misskey from 'misskey-js';
-import MkModalWindow from '@/components/MkModalWindow.vue';
+import MkWindow from '@/components/MkWindow.vue';
 import MkButton from '@/components/MkButton.vue';
 import MkInput from '@/components/MkInput.vue';
 import MkInfo from '@/components/MkInfo.vue';
 import MkFolder from '@/components/MkFolder.vue';
 import * as os from '@/os.js';
+import { misskeyApi } from '@/scripts/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { customEmojiCategories } from '@/custom-emojis.js';
 import MkSwitch from '@/components/MkSwitch.vue';
@@ -89,14 +95,19 @@ import { selectFile } from '@/scripts/select-file.js';
 import MkRolePreview from '@/components/MkRolePreview.vue';
 
 const props = defineProps<{
-	emoji?: any,
+	emoji?: Misskey.entities.EmojiDetailed,
 }>();
 
-const dialog = ref<InstanceType<typeof MkModalWindow> | null>(null);
+const emit = defineEmits<{
+	(ev: 'done', v: { deleted?: boolean; updated?: Misskey.entities.AdminEmojiUpdateRequest; created?: Misskey.entities.AdminEmojiUpdateRequest }): void,
+	(ev: 'closed'): void
+}>();
+
+const windowEl = ref<InstanceType<typeof MkWindow> | null>(null);
 const name = ref<string>(props.emoji ? props.emoji.name : '');
-const category = ref<string>(props.emoji ? props.emoji.category : '');
+const category = ref<string>(props.emoji?.category ? props.emoji.category : '');
 const aliases = ref<string>(props.emoji ? props.emoji.aliases.join(' ') : '');
-const license = ref<string>(props.emoji ? (props.emoji.license ?? '') : '');
+const license = ref<string>(props.emoji?.license ? props.emoji.license : '');
 const isSensitive = ref(props.emoji ? props.emoji.isSensitive : false);
 const localOnly = ref(props.emoji ? props.emoji.localOnly : false);
 const roleIdsThatCanBeUsedThisEmojiAsReaction = ref(props.emoji ? props.emoji.roleIdsThatCanBeUsedThisEmojiAsReaction : []);
@@ -104,17 +115,12 @@ const rolesThatCanBeUsedThisEmojiAsReaction = ref<Misskey.entities.Role[]>([]);
 const file = ref<Misskey.entities.DriveFile>();
 
 watch(roleIdsThatCanBeUsedThisEmojiAsReaction, async () => {
-	rolesThatCanBeUsedThisEmojiAsReaction.value = (await Promise.all(roleIdsThatCanBeUsedThisEmojiAsReaction.value.map((id) => os.api('admin/roles/show', { roleId: id }).catch(() => null)))).filter(x => x != null);
+	rolesThatCanBeUsedThisEmojiAsReaction.value = (await Promise.all(roleIdsThatCanBeUsedThisEmojiAsReaction.value.map((id) => misskeyApi('admin/roles/show', { roleId: id }).catch(() => null)))).filter(x => x != null);
 }, { immediate: true });
 
 const imgUrl = computed(() => file.value ? file.value.url : props.emoji ? `/emoji/${props.emoji.name}.webp` : null);
 
-const emit = defineEmits<{
-	(ev: 'done', v: { deleted?: boolean; updated?: any; created?: any }): void,
-	(ev: 'closed'): void
-}>();
-
-async function changeImage(ev) {
+async function changeImage(ev: Event) {
 	file.value = await selectFile(ev.currentTarget ?? ev.target, null);
 	const candidate = file.value.name.replace(/\.(.+)$/, '');
 	if (candidate.match(/^[a-z0-9_]+$/)) {
@@ -123,18 +129,18 @@ async function changeImage(ev) {
 }
 
 async function addRole() {
-	const roles = await os.api('admin/roles/list');
+	const roles = await misskeyApi('admin/roles/list');
 	const currentRoleIds = rolesThatCanBeUsedThisEmojiAsReaction.value.map(x => x.id);
 
 	const { canceled, result: role } = await os.select({
 		items: roles.filter(r => r.isPublic).filter(r => !currentRoleIds.includes(r.id)).map(r => ({ text: r.name, value: r })),
 	});
-	if (canceled) return;
+	if (canceled || role == null) return;
 
 	rolesThatCanBeUsedThisEmojiAsReaction.value.push(role);
 }
 
-async function removeRole(role, ev) {
+async function removeRole(role: Misskey.entities.RoleLite, ev: Event) {
 	rolesThatCanBeUsedThisEmojiAsReaction.value = rolesThatCanBeUsedThisEmojiAsReaction.value.filter(x => x.id !== role.id);
 }
 
@@ -166,7 +172,7 @@ async function done() {
 			},
 		});
 
-		dialog.value.close();
+		windowEl.value?.close();
 	} else {
 		const created = await os.apiWithDialog('admin/emoji/add', params);
 
@@ -174,24 +180,25 @@ async function done() {
 			created: created,
 		});
 
-		dialog.value.close();
+		windowEl.value?.close();
 	}
 }
 
 async function del() {
+	if (!props.emoji) return;
 	const { canceled } = await os.confirm({
 		type: 'warning',
-		text: i18n.t('removeAreYouSure', { x: name.value }),
+		text: i18n.tsx.removeAreYouSure({ x: name.value }),
 	});
 	if (canceled) return;
 
-	os.api('admin/emoji/delete', {
+	misskeyApi('admin/emoji/delete', {
 		id: props.emoji.id,
 	}).then(() => {
 		emit('done', {
 			deleted: true,
 		});
-		dialog.value.close();
+		windowEl.value?.close();
 	});
 }
 </script>
@@ -233,11 +240,13 @@ async function del() {
 
 .footer {
 	position: sticky;
+	z-index: 10000;
 	bottom: 0;
 	left: 0;
 	padding: 12px;
-	border-top: solid 0.5px var(--divider);
-	-webkit-backdrop-filter: var(--blur, blur(15px));
-	backdrop-filter: var(--blur, blur(15px));
+	border-top: solid 0.5px var(--MI_THEME-divider);
+	background: var(--MI_THEME-acrylicBg);
+	-webkit-backdrop-filter: var(--MI-blur, blur(15px));
+	backdrop-filter: var(--MI-blur, blur(15px));
 }
 </style>

@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -32,7 +32,7 @@ const emit = defineEmits<{
 
 function done() {
 	emit('done');
-	modal.value.close();
+	modal.value?.close();
 }
 
 watch(() => props.showing, () => {
@@ -47,8 +47,8 @@ watch(() => props.showing, () => {
 	padding: 32px;
 	box-sizing: border-box;
 	text-align: center;
-	background: var(--panel);
-	border-radius: var(--radius);
+	background: var(--MI_THEME-panel);
+	border-radius: var(--MI-radius);
 	width: 250px;
 
 	&.iconOnly {
@@ -65,7 +65,7 @@ watch(() => props.showing, () => {
 	font-size: 32px;
 
 	&.success {
-		color: var(--accent);
+		color: var(--MI_THEME-accent);
 	}
 
 	&.waiting {

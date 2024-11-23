@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -13,12 +13,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 >
 	<div v-if="showing" :class="$style.root" class="_popup _shadow" :style="{ zIndex, top: top + 'px', left: left + 'px' }" @mouseover="() => { emit('mouseover'); }" @mouseleave="() => { emit('mouseleave'); }">
 		<div v-if="user != null">
-			<div :class="$style.banner" :style="user.bannerUrl ? `background-image: url(${user.bannerUrl})` : ''">
+			<div :class="$style.banner" :style="user.bannerUrl ? `background-image: url(${defaultStore.state.disableShowingAnimatedImages ? getStaticImageUrl(user.bannerUrl) : user.bannerUrl})` : ''">
 				<span v-if="$i && $i.id != user.id && user.isFollowed" :class="$style.followed">{{ i18n.ts.followsYou }}</span>
 			</div>
 			<svg viewBox="0 0 128 128" :class="$style.avatarBack">
 				<g transform="matrix(1.6,0,0,1.6,-38.4,-51.2)">
-					<path d="M64,32C81.661,32 96,46.339 96,64C95.891,72.184 104,72 104,72C104,72 74.096,80 64,80C52.755,80 24,72 24,72C24,72 31.854,72.018 32,64C32,46.339 46.339,32 64,32Z" style="fill: var(--popup);"/>
+					<path d="M64,32C81.661,32 96,46.339 96,64C95.891,72.184 104,72 104,72C104,72 74.096,80 64,80C52.755,80 24,72 24,72C24,72 31.854,72.018 32,64C32,46.339 46.339,32 64,32Z" style="fill: var(--MI_THEME-popup);"/>
 				</g>
 			</svg>
 			<MkAvatar :class="$style.avatar" :user="user" indicator/>
@@ -60,12 +60,14 @@ import * as Misskey from 'misskey-js';
 import MkFollowButton from '@/components/MkFollowButton.vue';
 import { userPage } from '@/filters/user.js';
 import * as os from '@/os.js';
+import { misskeyApi } from '@/scripts/misskey-api.js';
 import { getUserMenu } from '@/scripts/get-user-menu.js';
 import number from '@/filters/number.js';
 import { i18n } from '@/i18n.js';
 import { defaultStore } from '@/store.js';
 import { $i } from '@/account.js';
 import { isFollowingVisibleForMe, isFollowersVisibleForMe } from '@/scripts/isFfVisibleForMe.js';
+import { getStaticImageUrl } from '@/scripts/media-proxy.js';
 
 const props = defineProps<{
 	showing: boolean;
@@ -85,6 +87,7 @@ const top = ref(0);
 const left = ref(0);
 
 function showMenu(ev: MouseEvent) {
+	if (user.value == null) return;
 	const { menu, cleanup } = getUserMenu(user.value);
 	os.popupMenu(menu, ev.currentTarget ?? ev.target).finally(cleanup);
 }
@@ -97,15 +100,15 @@ onMounted(() => {
 			Misskey.acct.parse(props.q.substring(1)) :
 			{ userId: props.q };
 
-		os.api('users/show', query).then(res => {
+		misskeyApi('users/show', query).then(res => {
 			if (!props.showing) return;
 			user.value = res;
 		});
 	}
 
 	const rect = props.source.getBoundingClientRect();
-	const x = ((rect.left + (props.source.offsetWidth / 2)) - (300 / 2)) + window.pageXOffset;
-	const y = rect.top + props.source.offsetHeight + window.pageYOffset;
+	const x = ((rect.left + (props.source.offsetWidth / 2)) - (300 / 2)) + window.scrollX;
+	const y = rect.top + props.source.offsetHeight + window.scrollY;
 
 	top.value = y;
 	left.value = x;
@@ -194,8 +197,8 @@ onMounted(() => {
 	padding: 16px 26px;
 	font-size: 0.8em;
 	text-align: center;
-	border-top: solid 1px var(--divider);
-	border-bottom: solid 1px var(--divider);
+	border-top: solid 1px var(--MI_THEME-divider);
+	border-bottom: solid 1px var(--MI_THEME-divider);
 }
 
 .mfm {
@@ -217,7 +220,7 @@ onMounted(() => {
 
 .statusItemLabel {
 	font-size: 0.7em;
-	color: var(--fgTransparentWeak);
+	color: var(--MI_THEME-fgTransparentWeak);
 }
 
 .menu {
@@ -225,7 +228,7 @@ onMounted(() => {
 	top: 8px;
 	right: 44px;
 	padding: 6px;
-	background: var(--panel);
+	background: var(--MI_THEME-panel);
 	border-radius: 999px;
 }
 

@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -33,7 +33,7 @@ watch(available, () => {
 	try {
 		window.TagCanvas.Start(idForCanvas, idForTags, {
 			textColour: '#ffffff',
-			outlineColour: tinycolor(computedStyle.getPropertyValue('--accent')).toHexString(),
+			outlineColour: tinycolor(computedStyle.getPropertyValue('--MI_THEME-accent')).toHexString(),
 			outlineRadius: 10,
 			initial: [-0.030, -0.010],
 			frontSelect: true,
@@ -52,7 +52,7 @@ watch(available, () => {
 });
 
 onMounted(() => {
-	width.value = rootEl.value.offsetWidth;
+	if (rootEl.value) width.value = rootEl.value.offsetWidth;
 
 	if (loaded) {
 		available.value = true;

@@ -1,11 +1,12 @@
 /*
- * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-FileCopyrightText: syuilo and misskey-project
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
 import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import * as os from '@/os.js';
+import { misskeyApi } from '@/scripts/misskey-api.js';
 import { useStream } from '@/stream.js';
 import { i18n } from '@/i18n.js';
 import { defaultStore } from '@/store.js';
@@ -65,7 +66,7 @@ export function chooseFileFromUrl(): Promise<Misskey.entities.DriveFile> {
 				}
 			});
 
-			os.api('drive/files/upload-from-url', {
+			misskeyApi('drive/files/upload-from-url', {
 				url: url,
 				folderId: defaultStore.state.uploadFolder,
 				marker,
@@ -79,7 +80,7 @@ export function chooseFileFromUrl(): Promise<Misskey.entities.DriveFile> {
 	});
 }
 
-function select(src: any, label: string | null, multiple: boolean): Promise<Misskey.entities.DriveFile[]> {
+function select(src: HTMLElement | EventTarget | null, label: string | null, multiple: boolean): Promise<Misskey.entities.DriveFile[]> {
 	return new Promise((res, rej) => {
 		const keepOriginal = ref(defaultStore.state.keepOriginalUploading);
 
@@ -106,10 +107,10 @@ function select(src: any, label: string | null, multiple: boolean): Promise<Miss
 	});
 }
 
-export function selectFile(src: any, label: string | null = null): Promise<Misskey.entities.DriveFile> {
+export function selectFile(src: HTMLElement | EventTarget | null, label: string | null = null): Promise<Misskey.entities.DriveFile> {
 	return select(src, label, false).then(files => files[0]);
 }
 
-export function selectFiles(src: any, label: string | null = null): Promise<Misskey.entities.DriveFile[]> {
+export function selectFiles(src: HTMLElement | EventTarget | null, label: string | null = null): Promise<Misskey.entities.DriveFile[]> {
 	return select(src, label, true);
 }

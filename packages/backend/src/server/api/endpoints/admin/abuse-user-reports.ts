@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-FileCopyrightText: syuilo and misskey-project
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
@@ -62,17 +62,30 @@ export const meta = {
 				reporter: {
 					type: 'object',
 					nullable: false, optional: false,
-					ref: 'User',
+					ref: 'UserDetailedNotMe',
 				},
 				targetUser: {
 					type: 'object',
 					nullable: false, optional: false,
-					ref: 'User',
+					ref: 'UserDetailedNotMe',
 				},
 				assignee: {
 					type: 'object',
-					nullable: true, optional: true,
-					ref: 'User',
+					nullable: true, optional: false,
+					ref: 'UserDetailedNotMe',
+				},
+				forwarded: {
+					type: 'boolean',
+					nullable: false, optional: false,
+				},
+				resolvedAs: {
+					type: 'string',
+					nullable: true, optional: false,
+					enum: ['accept', 'reject', null],
+				},
+				moderationNote: {
+					type: 'string',
+					nullable: false, optional: false,
 				},
 			},
 		},
@@ -88,7 +101,6 @@ export const paramDef = {
 		state: { type: 'string', nullable: true, default: null },
 		reporterOrigin: { type: 'string', enum: ['combined', 'local', 'remote'], default: 'combined' },
 		targetUserOrigin: { type: 'string', enum: ['combined', 'local', 'remote'], default: 'combined' },
-		forwarded: { type: 'boolean', default: false },
 	},
 	required: [],
 } as const;

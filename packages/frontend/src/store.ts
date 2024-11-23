@@ -1,13 +1,18 @@
 /*
- * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-FileCopyrightText: syuilo and misskey-project
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
 import { markRaw, ref } from 'vue';
 import * as Misskey from 'misskey-js';
-import { miLocalStorage } from './local-storage.js';
+import { hemisphere } from '@@/js/intl-const.js';
+import lightTheme from '@@/themes/l-light.json5';
+import darkTheme from '@@/themes/d-green-lime.json5';
 import type { SoundType } from '@/scripts/sound.js';
+import { DEFAULT_DEVICE_KIND, type DeviceKind } from '@/scripts/device-kind.js';
+import { miLocalStorage } from '@/local-storage.js';
 import { Storage } from '@/pizzax.js';
+import type { Ast } from '@syuilo/aiscript';
 
 interface PostFormAction {
 	title: string,
@@ -75,6 +80,10 @@ export const defaultStore = markRaw(new Storage('base', {
 			global: false,
 		},
 	},
+	abusesTutorial: {
+		where: 'account',
+		default: false,
+	},
 	keepCw: {
 		where: 'account',
 		default: true,
@@ -93,7 +102,7 @@ export const defaultStore = markRaw(new Storage('base', {
 	},
 	defaultNoteVisibility: {
 		where: 'account',
-		default: 'public',
+		default: 'public' as (typeof Misskey.noteVisibilities)[number],
 	},
 	defaultNoteLocalOnly: {
 		where: 'account',
@@ -149,7 +158,7 @@ export const defaultStore = markRaw(new Storage('base', {
 	},
 	visibility: {
 		where: 'deviceAccount',
-		default: 'public' as 'public' | 'home' | 'followers' | 'specified',
+		default: 'public' as (typeof Misskey.noteVisibilities)[number],
 	},
 	localOnly: {
 		where: 'deviceAccount',
@@ -184,6 +193,12 @@ export const defaultStore = markRaw(new Storage('base', {
 		default: {
 			src: 'home' as 'home' | 'local' | 'social' | 'global' | `list:${string}`,
 			userList: null as Misskey.entities.UserList | null,
+			filter: {
+				withReplies: true,
+				withRenotes: true,
+				withSensitive: true,
+				onlyFiles: false,
+			},
 		},
 	},
 	pinnedUserLists: {
@@ -193,7 +208,7 @@ export const defaultStore = markRaw(new Storage('base', {
 
 	overridedDeviceKind: {
 		where: 'device',
-		default: null as null | 'smartphone' | 'tablet' | 'desktop',
+		default: null as DeviceKind | null,
 	},
 	serverDisconnectedBehavior: {
 		where: 'device',
@@ -213,11 +228,15 @@ export const defaultStore = markRaw(new Storage('base', {
 	},
 	animatedMfm: {
 		where: 'device',
-		default: false,
+		default: !window.matchMedia('(prefers-reduced-motion)').matches,
 	},
 	advancedMfm: {
 		where: 'device',
 		default: true,
+	},
+	showReactionsCount: {
+		where: 'device',
+		default: false,
 	},
 	enableQuickAddMfmFunction: {
 		where: 'device',
@@ -239,17 +258,17 @@ export const defaultStore = markRaw(new Storage('base', {
 		where: 'device',
 		default: 'twemoji', // twemoji / fluentEmoji / native
 	},
-	disableDrawer: {
+	menuStyle: {
 		where: 'device',
-		default: false,
+		default: 'auto' as 'auto' | 'popup' | 'drawer',
 	},
 	useBlurEffectForModal: {
 		where: 'device',
-		default: !/mobile|iphone|android/.test(navigator.userAgent.toLowerCase()), // 循環参照するのでdevice-kind.tsは参照できない
+		default: DEFAULT_DEVICE_KIND === 'desktop',
 	},
 	useBlurEffect: {
 		where: 'device',
-		default: !/mobile|iphone|android/.test(navigator.userAgent.toLowerCase()), // 循環参照するのでdevice-kind.tsは参照できない
+		default: DEFAULT_DEVICE_KIND === 'desktop',
 	},
 	showFixedPostForm: {
 		where: 'device',
@@ -291,9 +310,9 @@ export const defaultStore = markRaw(new Storage('base', {
 		where: 'device',
 		default: 2,
 	},
-	emojiPickerUseDrawerForMobile: {
+	emojiPickerStyle: {
 		where: 'device',
-		default: true,
+		default: 'auto' as 'auto' | 'popup' | 'drawer',
 	},
 	recentlyUsedEmojis: {
 		where: 'device',
@@ -379,19 +398,15 @@ export const defaultStore = markRaw(new Storage('base', {
 		where: 'device',
 		default: 'horizontal' as 'vertical' | 'horizontal',
 	},
-	enableCondensedLineForAcct: {
+	enableCondensedLine: {
 		where: 'device',
-		default: false,
+		default: true,
 	},
 	additionalUnicodeEmojiIndexes: {
 		where: 'device',
 		default: {} as Record<string, Record<string, string[]>>,
 	},
 	keepScreenOn: {
-		where: 'device',
-		default: false,
-	},
-	tlWithReplies: {
 		where: 'device',
 		default: false,
 	},
@@ -420,6 +435,45 @@ export const defaultStore = markRaw(new Storage('base', {
 		where: 'device',
 		default: false,
 	},
+	dropAndFusion: {
+		where: 'device',
+		default: {
+			bgmVolume: 0.25,
+			sfxVolume: 1,
+		},
+	},
+	hemisphere: {
+		where: 'device',
+		default: hemisphere as 'N' | 'S',
+	},
+	enableHorizontalSwipe: {
+		where: 'device',
+		default: true,
+	},
+	useNativeUIForVideoAudioPlayer: {
+		where: 'device',
+		default: false,
+	},
+	keepOriginalFilename: {
+		where: 'device',
+		default: true,
+	},
+	alwaysConfirmFollow: {
+		where: 'device',
+		default: true,
+	},
+	confirmWhenRevealingSensitiveMedia: {
+		where: 'device',
+		default: false,
+	},
+	contextMenu: {
+		where: 'device',
+		default: 'app' as 'app' | 'appWithShift' | 'native',
+	},
+	skipNoteRender: {
+		where: 'device',
+		default: true,
+	},
 
 	sound_masterVolume: {
 		where: 'device',
@@ -445,14 +499,6 @@ export const defaultStore = markRaw(new Storage('base', {
 		where: 'device',
 		default: { type: 'syuilo/n-ea', volume: 1 } as SoundStore,
 	},
-	sound_antenna: {
-		where: 'device',
-		default: { type: 'syuilo/triple', volume: 1 } as SoundStore,
-	},
-	sound_channel: {
-		where: 'device',
-		default: { type: 'syuilo/square-pico', volume: 1 } as SoundStore,
-	},
 	sound_reaction: {
 		where: 'device',
 		default: { type: 'syuilo/bubble2', volume: 1 } as SoundStore,
@@ -472,7 +518,7 @@ export type Plugin = {
 	token: string;
 	src: string | null;
 	version: string;
-	ast: any[];
+	ast: Ast.Node[];
 	author?: string;
 	description?: string;
 	permissions?: string[];
@@ -486,8 +532,6 @@ interface Watcher {
 /**
  * 常にメモリにロードしておく必要がないような設定情報を保管するストレージ(非リアクティブ)
  */
-import lightTheme from '@/themes/l-light.json5';
-import darkTheme from '@/themes/d-green-lime.json5';
 
 export class ColdDeviceStorage {
 	public static default = {
@@ -512,19 +556,19 @@ export class ColdDeviceStorage {
 	}
 
 	public static getAll(): Partial<typeof this.default> {
-		return (Object.keys(this.default) as (keyof typeof this.default)[]).reduce((acc, key) => {
+		return (Object.keys(this.default) as (keyof typeof this.default)[]).reduce<Partial<typeof this.default>>((acc, key) => {
 			const value = localStorage.getItem(PREFIX + key);
 			if (value != null) {
 				acc[key] = JSON.parse(value);
 			}
 			return acc;
-		}, {} as any);
+		}, {});
 	}
 
 	public static set<T extends keyof typeof ColdDeviceStorage.default>(key: T, value: typeof ColdDeviceStorage.default[T]): void {
 		// 呼び出し側のバグ等で undefined が来ることがある
 		// undefined を文字列として miLocalStorage に入れると参照する際の JSON.parse でコケて不具合の元になるため無視
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 		if (value === undefined) {
 			console.error(`attempt to store undefined value for key '${key}'`);
 			return;
@@ -563,7 +607,7 @@ export class ColdDeviceStorage {
 			get: () => {
 				return valueRef.value;
 			},
-			set: (value: unknown) => {
+			set: (value: typeof ColdDeviceStorage.default[K]) => {
 				const val = value;
 				ColdDeviceStorage.set(key, val);
 			},

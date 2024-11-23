@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -14,7 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div v-for="stat in stats" :key="stat.tag">
 				<div class="tag">
 					<MkA class="a" :to="`/tags/${ encodeURIComponent(stat.tag) }`" :title="stat.tag">#{{ stat.tag }}</MkA>
-					<p>{{ i18n.t('nUsersMentioned', { n: stat.usersCount }) }}</p>
+					<p>{{ i18n.tsx.nUsersMentioned({ n: stat.usersCount }) }}</p>
 				</div>
 				<MkMiniChart class="chart" :src="stat.chart"/>
 			</div>
@@ -30,8 +30,8 @@ import { useWidgetPropsManager, WidgetComponentEmits, WidgetComponentExpose, Wid
 import { GetFormResultType } from '@/scripts/form.js';
 import MkContainer from '@/components/MkContainer.vue';
 import MkMiniChart from '@/components/MkMiniChart.vue';
-import * as os from '@/os.js';
-import { useInterval } from '@/scripts/use-interval.js';
+import { misskeyApiGet } from '@/scripts/misskey-api.js';
+import { useInterval } from '@@/js/use-interval.js';
 import { i18n } from '@/i18n.js';
 import { defaultStore } from '@/store.js';
 
@@ -59,7 +59,7 @@ const stats = ref<Misskey.entities.HashtagsTrendResponse>([]);
 const fetching = ref(true);
 
 const fetch = () => {
-	os.apiGet('hashtags/trend').then(res => {
+	misskeyApiGet('hashtags/trend').then(res => {
 		stats.value = res;
 		fetching.value = false;
 	});
@@ -91,13 +91,13 @@ defineExpose<WidgetComponentExpose>({
 			display: flex;
 			align-items: center;
 			padding: 14px 16px;
-			border-bottom: solid 0.5px var(--divider);
+			border-bottom: solid 0.5px var(--MI_THEME-divider);
 
 			> .tag {
 				flex: 1;
 				overflow: hidden;
 				font-size: 0.9em;
-				color: var(--fg);
+				color: var(--MI_THEME-fg);
 
 				> .a {
 					display: block;

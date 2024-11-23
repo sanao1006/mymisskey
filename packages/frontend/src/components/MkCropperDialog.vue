@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	:withOkButton="true"
 	@close="cancel()"
 	@ok="ok()"
-	@closed="$emit('closed')"
+	@closed="emit('closed')"
 >
 	<template #header>{{ i18n.ts.cropImage }}</template>
 	<template #default="{ width, height }">
@@ -39,7 +39,7 @@ import MkModalWindow from '@/components/MkModalWindow.vue';
 import * as os from '@/os.js';
 import { $i } from '@/account.js';
 import { defaultStore } from '@/store.js';
-import { apiUrl } from '@/config.js';
+import { apiUrl } from '@@/js/config.js';
 import { i18n } from '@/i18n.js';
 import { getProxiedImageUrl } from '@/scripts/media-proxy.js';
 
@@ -63,18 +63,25 @@ const loading = ref(true);
 
 const ok = async () => {
 	const promise = new Promise<Misskey.entities.DriveFile>(async (res) => {
-		const croppedCanvas = await cropper?.getCropperSelection()?.$toCanvas();
+		const croppedImage = await cropper?.getCropperImage();
+		const croppedSection = await cropper?.getCropperSelection();
+
+		// 拡大率を計算し、(ほぼ)元の大きさに戻す
+		const zoomedRate = croppedImage.getBoundingClientRect().width / croppedImage.clientWidth;
+		const widthToRender = croppedSection.getBoundingClientRect().width / zoomedRate;
+
+		const croppedCanvas = await croppedSection?.$toCanvas({ width: widthToRender });
 		croppedCanvas?.toBlob(blob => {
 			if (!blob) return;
 			const formData = new FormData();
 			formData.append('file', blob);
 			formData.append('name', `cropped_${props.file.name}`);
 			formData.append('isSensitive', props.file.isSensitive ? 'true' : 'false');
-			formData.append('comment', props.file.comment ?? 'null');
+			if (props.file.comment) { formData.append('comment', props.file.comment);}
 			formData.append('i', $i!.token);
-			if (props.uploadFolder || props.uploadFolder === null) {
-				formData.append('folderId', props.uploadFolder ?? 'null');
-			} else if (defaultStore.state.uploadFolder) {
+			if (props.uploadFolder) {
+				formData.append('folderId', props.uploadFolder);
+			} else if (props.uploadFolder !== null && defaultStore.state.uploadFolder) {
 				formData.append('folderId', defaultStore.state.uploadFolder);
 			}
 
@@ -118,7 +125,7 @@ onMounted(() => {
 	const computedStyle = getComputedStyle(document.documentElement);
 
 	const selection = cropper.getCropperSelection()!;
-	selection.themeColor = tinycolor(computedStyle.getPropertyValue('--accent')).toHexString();
+	selection.themeColor = tinycolor(computedStyle.getPropertyValue('--MI_THEME-accent')).toHexString();
 	selection.aspectRatio = props.aspectRatio;
 	selection.initialAspectRatio = props.aspectRatio;
 	selection.outlined = true;
@@ -163,8 +170,8 @@ onMounted(() => {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		-webkit-backdrop-filter: var(--blur, blur(10px));
-		backdrop-filter: var(--blur, blur(10px));
+		-webkit-backdrop-filter: var(--MI-blur, blur(10px));
+		backdrop-filter: var(--MI-blur, blur(10px));
 		background: rgba(0, 0, 0, 0.5);
 	}
 

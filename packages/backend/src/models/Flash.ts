@@ -1,11 +1,14 @@
 /*
- * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-FileCopyrightText: syuilo and misskey-project
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
 import { Entity, Index, JoinColumn, Column, PrimaryColumn, ManyToOne } from 'typeorm';
 import { id } from './util/id.js';
 import { MiUser } from './User.js';
+
+export const flashVisibility = ['public', 'private'] as const;
+export type FlashVisibility = typeof flashVisibility[number];
 
 @Entity('flash')
 export class MiFlash {
@@ -63,5 +66,5 @@ export class MiFlash {
 	@Column('varchar', {
 		length: 512, default: 'public',
 	})
-	public visibility: 'public' | 'private';
+	public visibility: FlashVisibility;
 }

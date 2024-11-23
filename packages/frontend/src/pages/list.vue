@@ -1,12 +1,12 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
 <MkStickyContainer>
 	<template #header><MkPageHeader :actions="headerActions" :tabs="headerTabs"/></template>
-	<MKSpacer v-if="!(typeof error === 'undefined')" :contentMax="1200">
+	<MkSpacer v-if="error != null" :contentMax="1200">
 		<div :class="$style.root">
 			<img :class="$style.img" :src="serverErrorImageUrl" class="_ghost"/>
 			<p :class="$style.text">
@@ -14,7 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				{{ i18n.ts.nothing }}
 			</p>
 		</div>
-	</MKSpacer>
+	</MkSpacer>
 	<MkSpacer v-else-if="list" :contentMax="700" :class="$style.main">
 		<div v-if="list" class="members _margin">
 			<div :class="$style.member_text">{{ i18n.ts.members }}</div>
@@ -37,6 +37,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { watch, computed, ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import * as os from '@/os.js';
+import { misskeyApi } from '@/scripts/misskey-api.js';
 import { userPage } from '@/filters/user.js';
 import { i18n } from '@/i18n.js';
 import MkUserCardMini from '@/components/MkUserCardMini.vue';
@@ -49,16 +50,16 @@ const props = defineProps<{
 }>();
 
 const list = ref<Misskey.entities.UserList | null>(null);
-const error = ref();
+const error = ref<unknown | null>(null);
 const users = ref<Misskey.entities.UserDetailed[]>([]);
 
 function fetchList(): void {
-	os.api('users/lists/show', {
+	misskeyApi('users/lists/show', {
 		listId: props.listId,
 		forPublic: true,
 	}).then(_list => {
 		list.value = _list;
-		os.api('users/show', {
+		misskeyApi('users/show', {
 			userIds: list.value.userIds,
 		}).then(_users => {
 			users.value = _users;
@@ -100,14 +101,14 @@ const headerActions = computed(() => []);
 
 const headerTabs = computed(() => []);
 
-definePageMetadata(computed(() => list.value ? {
-	title: list.value.name,
+definePageMetadata(() => ({
+	title: list.value ? list.value.name : i18n.ts.lists,
 	icon: 'ti ti-list',
-} : null));
+}));
 </script>
 <style lang="scss" module>
 .main {
-	min-height: calc(100cqh - (var(--stickyTop, 0px) + var(--stickyBottom, 0px)));
+	min-height: calc(100cqh - (var(--MI-stickyTop, 0px) + var(--MI-stickyBottom, 0px)));
 }
 
 .userItem {

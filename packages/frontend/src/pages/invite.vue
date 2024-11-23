@@ -1,14 +1,12 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
 <MkStickyContainer>
-	<template #header>
-		<MkPageHeader/>
-	</template>
-	<MKSpacer v-if="!instance.disableRegistration || !($i && ($i.isAdmin || $i.policies.canInvite))" :contentMax="1200">
+	<template #header><MkPageHeader/></template>
+	<MkSpacer v-if="!instance.disableRegistration || !($i && ($i.isAdmin || $i.policies.canInvite))" :contentMax="1200">
 		<div :class="$style.root">
 			<img :class="$style.img" :src="serverErrorImageUrl" class="_ghost"/>
 			<div :class="$style.text">
@@ -16,12 +14,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 				{{ i18n.ts.nothing }}
 			</div>
 		</div>
-	</MKSpacer>
+	</MkSpacer>
 	<MkSpacer v-else :contentMax="800">
 		<div class="_gaps_m" style="text-align: center;">
-			<div v-if="resetCycle && inviteLimit">{{ i18n.t('inviteLimitResetCycle', { time: resetCycle, limit: inviteLimit }) }}</div>
+			<div v-if="resetCycle && inviteLimit">{{ i18n.tsx.inviteLimitResetCycle({ time: resetCycle, limit: inviteLimit }) }}</div>
 			<MkButton inline primary rounded :disabled="currentInviteLimit !== null && currentInviteLimit <= 0" @click="create"><i class="ti ti-user-plus"></i> {{ i18n.ts.createInviteCode }}</MkButton>
-			<div v-if="currentInviteLimit !== null">{{ i18n.t('createLimitRemaining', { limit: currentInviteLimit }) }}</div>
+			<div v-if="currentInviteLimit !== null">{{ i18n.tsx.createLimitRemaining({ limit: currentInviteLimit }) }}</div>
 
 			<MkPagination ref="pagingComponent" :pagination="pagination">
 				<template #default="{ items }">
@@ -40,6 +38,7 @@ import { computed, ref, shallowRef } from 'vue';
 import type * as Misskey from 'misskey-js';
 import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
+import { misskeyApi } from '@/scripts/misskey-api.js';
 import MkButton from '@/components/MkButton.vue';
 import MkPagination, { Paging } from '@/components/MkPagination.vue';
 import MkInviteCode from '@/components/MkInviteCode.vue';
@@ -68,7 +67,7 @@ const resetCycle = computed<null | string>(() => {
 });
 
 async function create() {
-	const ticket = await os.api('invite/create');
+	const ticket = await misskeyApi('invite/create');
 	os.alert({
 		type: 'success',
 		title: i18n.ts.inviteCodeCreated,
@@ -87,15 +86,15 @@ function deleted(id: string) {
 }
 
 async function update() {
-	currentInviteLimit.value = (await os.api('invite/limit')).remaining;
+	currentInviteLimit.value = (await misskeyApi('invite/limit')).remaining;
 }
 
 update();
 
-definePageMetadata({
+definePageMetadata(() => ({
 	title: i18n.ts.invite,
 	icon: 'ti ti-user-plus',
-});
+}));
 </script>
 
 <style lang="scss" module>

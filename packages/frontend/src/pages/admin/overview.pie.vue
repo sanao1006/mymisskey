@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -41,7 +41,7 @@ onMounted(() => {
 			labels: props.data.map(x => x.name),
 			datasets: [{
 				backgroundColor: props.data.map(x => x.color),
-				borderColor: getComputedStyle(document.documentElement).getPropertyValue('--panel'),
+				borderColor: getComputedStyle(document.documentElement).getPropertyValue('--MI_THEME-panel'),
 				borderWidth: 2,
 				hoverOffset: 0,
 				data: props.data.map(x => x.value),

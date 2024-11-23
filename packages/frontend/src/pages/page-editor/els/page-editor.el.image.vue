@@ -1,11 +1,11 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
 <!-- eslint-disable vue/no-mutating-props -->
-<XContainer :draggable="true" @remove="() => $emit('remove')">
+<XContainer :draggable="true" @remove="() => emit('remove')">
 	<template #header><i class="ti ti-photo"></i> {{ i18n.ts._pages.blocks.image }}</template>
 	<template #func>
 		<button @click="choose()">
@@ -26,14 +26,16 @@ import * as Misskey from 'misskey-js';
 import XContainer from '../page-editor.container.vue';
 import MkDriveFileThumbnail from '@/components/MkDriveFileThumbnail.vue';
 import * as os from '@/os.js';
+import { misskeyApi } from '@/scripts/misskey-api.js';
 import { i18n } from '@/i18n.js';
 
 const props = defineProps<{
-	modelValue: any
+	modelValue: Misskey.entities.PageBlock & { type: 'image' };
 }>();
 
 const emit = defineEmits<{
-	(ev: 'update:modelValue', value: any): void;
+	(ev: 'update:modelValue', value: Misskey.entities.PageBlock & { type: 'image' }): void;
+	(ev: 'remove'): void;
 }>();
 
 const file = ref<Misskey.entities.DriveFile | null>(null);
@@ -52,7 +54,7 @@ onMounted(async () => {
 	if (props.modelValue.fileId == null) {
 		await choose();
 	} else {
-		os.api('drive/files/show', {
+		misskeyApi('drive/files/show', {
 			fileId: props.modelValue.fileId,
 		}).then(fileResponse => {
 			file.value = fileResponse;

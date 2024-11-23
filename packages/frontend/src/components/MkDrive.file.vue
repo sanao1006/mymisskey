@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -45,9 +45,9 @@ import bytes from '@/filters/bytes.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { $i } from '@/account.js';
-import { useRouter } from '@/router.js';
 import { getDriveFileMenu } from '@/scripts/get-drive-file-menu.js';
 import { deviceKind } from '@/scripts/device-kind.js';
+import { useRouter } from '@/router/supplier.js';
 
 const router = useRouter();
 
@@ -115,14 +115,14 @@ function onDragend() {
 		background: rgba(#000, 0.05);
 
 		> .label {
-			&:before,
-			&:after {
+			&::before,
+			&::after {
 				background: #0b65a5;
 			}
 
 			&.red {
-				&:before,
-				&:after {
+				&::before,
+				&::after {
 					background: #c12113;
 				}
 			}
@@ -133,14 +133,14 @@ function onDragend() {
 		background: rgba(#000, 0.1);
 
 		> .label {
-			&:before,
-			&:after {
+			&::before,
+			&::after {
 				background: #0b588c;
 			}
 
 			&.red {
-				&:before,
-				&:after {
+				&::before,
+				&::after {
 					background: #ce2212;
 				}
 			}
@@ -148,19 +148,19 @@ function onDragend() {
 	}
 
 	&.isSelected {
-		background: var(--accent);
+		background: var(--MI_THEME-accent);
 
 		&:hover {
-			background: var(--accentLighten);
+			background: var(--MI_THEME-accentLighten);
 		}
 
 		&:active {
-			background: var(--accentDarken);
+			background: var(--MI_THEME-accentDarken);
 		}
 
 		> .label {
-			&:before,
-			&:after {
+			&::before,
+			&::after {
 				display: none;
 			}
 		}
@@ -181,8 +181,8 @@ function onDragend() {
 	left: 0;
 	pointer-events: none;
 
-	&:before,
-	&:after {
+	&::before,
+	&::after {
 		content: "";
 		display: block;
 		position: absolute;
@@ -190,14 +190,14 @@ function onDragend() {
 		background: #0c7ac9;
 	}
 
-	&:before {
+	&::before {
 		top: 0;
 		left: 57px;
 		width: 28px;
 		height: 8px;
 	}
 
-	&:after {
+	&::after {
 		top: 57px;
 		left: 0;
 		width: 8px;
@@ -205,8 +205,8 @@ function onDragend() {
 	}
 
 	&.red {
-		&:before,
-		&:after {
+		&::before,
+		&::after {
 			background: #c12113;
 		}
 	}
@@ -244,7 +244,7 @@ function onDragend() {
 	font-size: 0.8em;
 	text-align: center;
 	word-break: break-all;
-	color: var(--fg);
+	color: var(--MI_THEME-fg);
 	overflow: hidden;
 }
 </style>

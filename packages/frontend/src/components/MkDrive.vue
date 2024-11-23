@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -52,6 +52,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					:selectMode="select === 'folder'"
 					:isSelected="selectedFolders.some(x => x.id === f.id)"
 					@chosen="chooseFolder"
+					@unchose="unchoseFolder"
 					@move="move"
 					@upload="upload"
 					@removeFile="removeFile"
@@ -82,8 +83,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<MkButton v-show="moreFiles" ref="loadMoreFiles" @click="fetchMoreFiles">{{ i18n.ts.loadMore }}</MkButton>
 			</div>
 			<div v-if="files.length == 0 && folders.length == 0 && !fetching" :class="$style.empty">
-				<div v-if="draghover">{{ i18n.t('empty-draghover') }}</div>
-				<div v-if="!draghover && folder == null"><strong>{{ i18n.ts.emptyDrive }}</strong><br/>{{ i18n.t('empty-drive-description') }}</div>
+				<div v-if="draghover">{{ i18n.ts['empty-draghover'] }}</div>
+				<div v-if="!draghover && folder == null"><strong>{{ i18n.ts.emptyDrive }}</strong><br/>{{ i18n.ts['empty-drive-description'] }}</div>
 				<div v-if="!draghover && folder != null">{{ i18n.ts.emptyFolder }}</div>
 			</div>
 		</div>
@@ -98,10 +99,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { nextTick, onActivated, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkButton from './MkButton.vue';
+import type { MenuItem } from '@/types/menu.js';
 import XNavFolder from '@/components/MkDrive.navFolder.vue';
 import XFolder from '@/components/MkDrive.folder.vue';
 import XFile from '@/components/MkDrive.file.vue';
 import * as os from '@/os.js';
+import { misskeyApi } from '@/scripts/misskey-api.js';
 import { useStream } from '@/stream.js';
 import { defaultStore } from '@/store.js';
 import { i18n } from '@/i18n.js';
@@ -154,7 +157,12 @@ const ilFilesObserver = new IntersectionObserver(
 	(entries) => entries.some((entry) => entry.isIntersecting) && !fetching.value && moreFiles.value && fetchMoreFiles(),
 );
 
+const sortModeSelect = ref<NonNullable<Misskey.entities.DriveFilesRequest['sort']>>('+createdAt');
+
 watch(folder, () => emit('cd', folder.value));
+watch(sortModeSelect, () => {
+	fetch();
+});
 
 function onStreamDriveFileCreated(file: Misskey.entities.DriveFile) {
 	addFile(file, true);
@@ -190,7 +198,7 @@ function onStreamDriveFolderDeleted(folderId: string) {
 	removeFolder(folderId);
 }
 
-function onDragover(ev: DragEvent): any {
+function onDragover(ev: DragEvent) {
 	if (!ev.dataTransfer) return;
 
 	// ドラッグ元が自分自身の所有するアイテムだったら
@@ -235,7 +243,7 @@ function onDragleave() {
 	draghover.value = false;
 }
 
-function onDrop(ev: DragEvent): any {
+function onDrop(ev: DragEvent) {
 	draghover.value = false;
 
 	if (!ev.dataTransfer) return;
@@ -254,7 +262,7 @@ function onDrop(ev: DragEvent): any {
 		const file = JSON.parse(driveFile);
 		if (files.value.some(f => f.id === file.id)) return;
 		removeFile(file.id);
-		os.api('drive/files/update', {
+		misskeyApi('drive/files/update', {
 			fileId: file.id,
 			folderId: folder.value ? folder.value.id : null,
 		});
@@ -270,7 +278,7 @@ function onDrop(ev: DragEvent): any {
 		if (folder.value && droppedFolder.id === folder.value.id) return false;
 		if (folders.value.some(f => f.id === droppedFolder.id)) return false;
 		removeFolder(droppedFolder.id);
-		os.api('drive/folders/update', {
+		misskeyApi('drive/folders/update', {
 			folderId: droppedFolder.id,
 			parentId: folder.value ? folder.value.id : null,
 		}).then(() => {
@@ -307,7 +315,7 @@ function urlUpload() {
 		placeholder: i18n.ts.uploadFromUrlDescription,
 	}).then(({ canceled, result: url }) => {
 		if (canceled || !url) return;
-		os.api('drive/files/upload-from-url', {
+		misskeyApi('drive/files/upload-from-url', {
 			url: url,
 			folderId: folder.value ? folder.value.id : undefined,
 		});
@@ -324,8 +332,8 @@ function createFolder() {
 		title: i18n.ts.createFolder,
 		placeholder: i18n.ts.folderName,
 	}).then(({ canceled, result: name }) => {
-		if (canceled) return;
-		os.api('drive/folders/create', {
+		if (canceled || name == null) return;
+		misskeyApi('drive/folders/create', {
 			name: name,
 			parentId: folder.value ? folder.value.id : undefined,
 		}).then(createdFolder => {
@@ -341,7 +349,7 @@ function renameFolder(folderToRename: Misskey.entities.DriveFolder) {
 		default: folderToRename.name,
 	}).then(({ canceled, result: name }) => {
 		if (canceled) return;
-		os.api('drive/folders/update', {
+		misskeyApi('drive/folders/update', {
 			folderId: folderToRename.id,
 			name: name,
 		}).then(updatedFolder => {
@@ -352,7 +360,7 @@ function renameFolder(folderToRename: Misskey.entities.DriveFolder) {
 }
 
 function deleteFolder(folderToDelete: Misskey.entities.DriveFolder) {
-	os.api('drive/folders/delete', {
+	misskeyApi('drive/folders/delete', {
 		folderId: folderToDelete.id,
 	}).then(() => {
 		// 削除時に親フォルダに移動
@@ -426,7 +434,12 @@ function chooseFolder(folderToChoose: Misskey.entities.DriveFolder) {
 	}
 }
 
-function move(target?: Misskey.entities.DriveFolder) {
+function unchoseFolder(folderToUnchose: Misskey.entities.DriveFolder) {
+	selectedFolders.value = selectedFolders.value.filter(f => f.id !== folderToUnchose.id);
+	emit('change-selection', selectedFolders.value);
+}
+
+function move(target?: Misskey.entities.DriveFolder | Misskey.entities.DriveFolder['id' | 'parentId']) {
 	if (!target) {
 		goRoot();
 		return;
@@ -436,7 +449,7 @@ function move(target?: Misskey.entities.DriveFolder) {
 
 	fetching.value = true;
 
-	os.api('drive/folders/show', {
+	misskeyApi('drive/folders/show', {
 		folderId: target,
 	}).then(folderToMove => {
 		folder.value = folderToMove;
@@ -535,7 +548,7 @@ async function fetch() {
 	const foldersMax = 30;
 	const filesMax = 30;
 
-	const foldersPromise = os.api('drive/folders', {
+	const foldersPromise = misskeyApi('drive/folders', {
 		folderId: folder.value ? folder.value.id : null,
 		limit: foldersMax + 1,
 	}).then(fetchedFolders => {
@@ -546,10 +559,11 @@ async function fetch() {
 		return fetchedFolders;
 	});
 
-	const filesPromise = os.api('drive/files', {
+	const filesPromise = misskeyApi('drive/files', {
 		folderId: folder.value ? folder.value.id : null,
 		type: props.type,
 		limit: filesMax + 1,
+		sort: sortModeSelect.value,
 	}).then(fetchedFiles => {
 		if (fetchedFiles.length === filesMax + 1) {
 			moreFiles.value = true;
@@ -571,7 +585,7 @@ function fetchMoreFolders() {
 
 	const max = 30;
 
-	os.api('drive/folders', {
+	misskeyApi('drive/folders', {
 		folderId: folder.value ? folder.value.id : null,
 		type: props.type,
 		untilId: folders.value.at(-1)?.id,
@@ -594,11 +608,12 @@ function fetchMoreFiles() {
 	const max = 30;
 
 	// ファイル一覧取得
-	os.api('drive/files', {
+	misskeyApi('drive/files', {
 		folderId: folder.value ? folder.value.id : null,
 		type: props.type,
 		untilId: files.value.at(-1)?.id,
 		limit: max + 1,
+		sort: sortModeSelect.value,
 	}).then(files => {
 		if (files.length === max + 1) {
 			moreFiles.value = true;
@@ -612,7 +627,9 @@ function fetchMoreFiles() {
 }
 
 function getMenu() {
-	return [{
+	const menu: MenuItem[] = [];
+
+	menu.push({
 		type: 'switch',
 		text: i18n.ts.keepOriginalUploading,
 		ref: keepOriginal,
@@ -630,19 +647,64 @@ function getMenu() {
 	}, { type: 'divider' }, {
 		text: folder.value ? folder.value.name : i18n.ts.drive,
 		type: 'label',
-	}, folder.value ? {
-		text: i18n.ts.renameFolder,
-		icon: 'ti ti-forms',
-		action: () => { renameFolder(folder.value); },
-	} : undefined, folder.value ? {
-		text: i18n.ts.deleteFolder,
-		icon: 'ti ti-trash',
-		action: () => { deleteFolder(folder.value as Misskey.entities.DriveFolder); },
-	} : undefined, {
+	});
+
+	menu.push({
+		type: 'parent',
+		text: i18n.ts.sort,
+		icon: 'ti ti-arrows-sort',
+		children: [{
+			text: `${i18n.ts.registeredDate} (${i18n.ts.descendingOrder})`,
+			icon: 'ti ti-sort-descending-letters',
+			action: () => { sortModeSelect.value = '+createdAt'; },
+			active: sortModeSelect.value === '+createdAt',
+		}, {
+			text: `${i18n.ts.registeredDate} (${i18n.ts.ascendingOrder})`,
+			icon: 'ti ti-sort-ascending-letters',
+			action: () => { sortModeSelect.value = '-createdAt'; },
+			active: sortModeSelect.value === '-createdAt',
+		}, {
+			text: `${i18n.ts.size} (${i18n.ts.descendingOrder})`,
+			icon: 'ti ti-sort-descending-letters',
+			action: () => { sortModeSelect.value = '+size'; },
+			active: sortModeSelect.value === '+size',
+		}, {
+			text: `${i18n.ts.size} (${i18n.ts.ascendingOrder})`,
+			icon: 'ti ti-sort-ascending-letters',
+			action: () => { sortModeSelect.value = '-size'; },
+			active: sortModeSelect.value === '-size',
+		}, {
+			text: `${i18n.ts.name} (${i18n.ts.descendingOrder})`,
+			icon: 'ti ti-sort-descending-letters',
+			action: () => { sortModeSelect.value = '+name'; },
+			active: sortModeSelect.value === '+name',
+		}, {
+			text: `${i18n.ts.name} (${i18n.ts.ascendingOrder})`,
+			icon: 'ti ti-sort-ascending-letters',
+			action: () => { sortModeSelect.value = '-name'; },
+			active: sortModeSelect.value === '-name',
+		}],
+	});
+
+	if (folder.value) {
+		menu.push({
+			text: i18n.ts.renameFolder,
+			icon: 'ti ti-forms',
+			action: () => { if (folder.value) renameFolder(folder.value); },
+		}, {
+			text: i18n.ts.deleteFolder,
+			icon: 'ti ti-trash',
+			action: () => { deleteFolder(folder.value as Misskey.entities.DriveFolder); },
+		});
+	}
+
+	menu.push({
 		text: i18n.ts.createFolder,
 		icon: 'ti ti-folder-plus',
 		action: () => { createFolder(); },
-	}];
+	});
+
+	return menu;
 }
 
 function showMenu(ev: MouseEvent) {
@@ -703,7 +765,7 @@ onBeforeUnmount(() => {
 	box-sizing: border-box;
 	overflow: auto;
 	font-size: 0.9em;
-	box-shadow: 0 1px 0 var(--divider);
+	box-shadow: 0 1px 0 var(--MI_THEME-divider);
 	user-select: none;
 }
 
@@ -750,7 +812,7 @@ onBeforeUnmount(() => {
 .main {
 	flex: 1;
 	overflow: auto;
-	padding: var(--margin);
+	padding: var(--MI-margin);
 	user-select: none;
 
 	&.fetching {
@@ -797,7 +859,7 @@ onBeforeUnmount(() => {
 	top: 38px;
 	width: 100%;
 	height: calc(100% - 38px);
-	border: dashed 2px var(--focus);
+	border: dashed 2px var(--MI_THEME-focus);
 	pointer-events: none;
 }
 </style>

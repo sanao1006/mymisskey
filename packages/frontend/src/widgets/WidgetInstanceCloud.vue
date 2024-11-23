@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -25,7 +25,8 @@ import { GetFormResultType } from '@/scripts/form.js';
 import MkContainer from '@/components/MkContainer.vue';
 import MkTagCloud from '@/components/MkTagCloud.vue';
 import * as os from '@/os.js';
-import { useInterval } from '@/scripts/use-interval.js';
+import { misskeyApi } from '@/scripts/misskey-api.js';
+import { useInterval } from '@@/js/use-interval.js';
 import { getProxiedImageUrlNullable } from '@/scripts/media-proxy.js';
 
 const name = 'instanceCloud';
@@ -56,7 +57,7 @@ function onInstanceClick(i) {
 }
 
 useInterval(() => {
-	os.api('federation/instances', {
+	misskeyApi('federation/instances', {
 		sort: '+latestRequestReceivedAt',
 		limit: 25,
 	}).then(res => {

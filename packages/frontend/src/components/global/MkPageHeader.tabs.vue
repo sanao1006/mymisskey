@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -53,7 +53,7 @@ export type Tab = {
 </script>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, watch, nextTick, shallowRef } from 'vue';
+import { nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue';
 import { defaultStore } from '@/store.js';
 
 const props = withDefaults(defineProps<{
@@ -120,13 +120,14 @@ function onTabWheel(ev: WheelEvent) {
 
 let entering = false;
 
-async function enter(el: HTMLElement) {
+async function enter(el: Element) {
+	if (!(el instanceof HTMLElement)) return;
 	entering = true;
 	const elementWidth = el.getBoundingClientRect().width;
 	el.style.width = '0';
 	el.style.paddingLeft = '0';
-	el.offsetWidth; // force reflow
-	el.style.width = elementWidth + 'px';
+	el.offsetWidth; // reflow
+	el.style.width = `${elementWidth}px`;
 	el.style.paddingLeft = '';
 	nextTick(() => {
 		entering = false;
@@ -135,20 +136,23 @@ async function enter(el: HTMLElement) {
 	setTimeout(renderTab, 170);
 }
 
-function afterEnter(el: HTMLElement) {
-	//el.style.width = '';
+function afterEnter(el: Element) {
+	if (!(el instanceof HTMLElement)) return;
+	// element.style.width = '';
 }
 
-async function leave(el: HTMLElement) {
+async function leave(el: Element) {
+	if (!(el instanceof HTMLElement)) return;
 	const elementWidth = el.getBoundingClientRect().width;
-	el.style.width = elementWidth + 'px';
+	el.style.width = `${elementWidth}px`;
 	el.style.paddingLeft = '';
-	el.offsetWidth; // force reflow
+	el.offsetWidth; // reflow
 	el.style.width = '0';
 	el.style.paddingLeft = '0';
 }
 
-function afterLeave(el: HTMLElement) {
+function afterLeave(el: Element) {
+	if (!(el instanceof HTMLElement)) return;
 	el.style.width = '';
 }
 
@@ -244,7 +248,7 @@ onUnmounted(() => {
 	position: absolute;
 	bottom: 0;
 	height: 3px;
-	background: var(--accent);
+	background: var(--MI_THEME-accent);
 	border-radius: 999px;
 	transition: none;
 	pointer-events: none;

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-FileCopyrightText: syuilo and misskey-project
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
@@ -79,7 +79,22 @@ export class MiMeta {
 	@Column('varchar', {
 		length: 1024, array: true, default: '{}',
 	})
+	public prohibitedWords: string[];
+
+	@Column('varchar', {
+		length: 1024, array: true, default: '{}',
+	})
+	public prohibitedWordsForNameOfUser: string[];
+
+	@Column('varchar', {
+		length: 1024, array: true, default: '{}',
+	})
 	public silencedHosts: string[];
+
+	@Column('varchar', {
+		length: 1024, array: true, default: '{}',
+	})
+	public mediaSilencedHosts: string[];
 
 	@Column('varchar', {
 		length: 1024,
@@ -194,6 +209,29 @@ export class MiMeta {
 	@Column('boolean', {
 		default: false,
 	})
+	public enableMcaptcha: boolean;
+
+	@Column('varchar', {
+		length: 1024,
+		nullable: true,
+	})
+	public mcaptchaSitekey: string | null;
+
+	@Column('varchar', {
+		length: 1024,
+		nullable: true,
+	})
+	public mcaptchaSecretKey: string | null;
+
+	@Column('varchar', {
+		length: 1024,
+		nullable: true,
+	})
+	public mcaptchaInstanceUrl: string | null;
+
+	@Column('boolean', {
+		default: false,
+	})
 	public enableRecaptcha: boolean;
 
 	@Column('varchar', {
@@ -225,6 +263,13 @@ export class MiMeta {
 	})
 	public turnstileSecretKey: string | null;
 
+	@Column('boolean', {
+		default: false,
+	})
+	public enableTestcaptcha: boolean;
+
+	// chaptcha系を追加した際にはnodeinfoのレスポンスに追加するのを忘れないようにすること
+
 	@Column('enum', {
 		enum: ['none', 'all', 'local', 'remote'],
 		default: 'none',
@@ -246,12 +291,6 @@ export class MiMeta {
 		default: false,
 	})
 	public enableSensitiveMediaDetectionForVideos: boolean;
-
-	@Column('varchar', {
-		length: 1024,
-		nullable: true,
-	})
-	public summalyProxy: string | null;
 
 	@Column('boolean', {
 		default: false,
@@ -329,9 +368,9 @@ export class MiMeta {
 	@Column('varchar', {
 		length: 1024,
 		default: 'https://github.com/misskey-dev/misskey',
-		nullable: false,
+		nullable: true,
 	})
-	public repositoryUrl: string;
+	public repositoryUrl: string | null;
 
 	@Column('varchar', {
 		length: 1024,
@@ -351,6 +390,12 @@ export class MiMeta {
 		nullable: true,
 	})
 	public privacyPolicyUrl: string | null;
+
+	@Column('varchar', {
+		length: 1024,
+		nullable: true,
+	})
+	public inquiryUrl: string | null;
 
 	@Column('varchar', {
 		length: 8192,
@@ -458,6 +503,23 @@ export class MiMeta {
 	public verifymailAuthKey: string | null;
 
 	@Column('boolean', {
+		default: false,
+	})
+	public enableTruemailApi: boolean;
+
+	@Column('varchar', {
+		length: 1024,
+		nullable: true,
+	})
+	public truemailInstance: string | null;
+
+	@Column('varchar', {
+		length: 1024,
+		nullable: true,
+	})
+	public truemailAuthKey: string | null;
+
+	@Column('boolean', {
 		default: true,
 	})
 	public enableChartsForRemoteUser: boolean;
@@ -466,6 +528,11 @@ export class MiMeta {
 		default: true,
 	})
 	public enableChartsForFederatedInstances: boolean;
+
+	@Column('boolean', {
+		default: true,
+	})
+	public enableStatsForFederatedInstances: boolean;
 
 	@Column('boolean', {
 		default: false,
@@ -537,8 +604,58 @@ export class MiMeta {
 	})
 	public perUserListTimelineCacheMax: number;
 
+	@Column('boolean', {
+		default: false,
+	})
+	public enableReactionsBuffering: boolean;
+
 	@Column('integer', {
 		default: 0,
 	})
 	public notesPerOneAd: number;
+
+	@Column('boolean', {
+		default: true,
+	})
+	public urlPreviewEnabled: boolean;
+
+	@Column('integer', {
+		default: 10000,
+	})
+	public urlPreviewTimeout: number;
+
+	@Column('bigint', {
+		default: 1024 * 1024 * 10,
+	})
+	public urlPreviewMaximumContentLength: number;
+
+	@Column('boolean', {
+		default: true,
+	})
+	public urlPreviewRequireContentLength: boolean;
+
+	@Column('varchar', {
+		length: 1024,
+		nullable: true,
+	})
+	public urlPreviewSummaryProxyUrl: string | null;
+
+	@Column('varchar', {
+		length: 1024,
+		nullable: true,
+	})
+	public urlPreviewUserAgent: string | null;
+
+	@Column('varchar', {
+		length: 128,
+		default: 'all',
+	})
+	public federation: 'all' | 'specified' | 'none';
+
+	@Column('varchar', {
+		length: 1024,
+		array: true,
+		default: '{}',
+	})
+	public federationHosts: string[];
 }

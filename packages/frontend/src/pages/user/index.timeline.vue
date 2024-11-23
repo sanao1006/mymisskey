@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -51,13 +51,13 @@ const pagination = computed(() => tab.value === 'featured' ? {
 
 <style lang="scss" module>
 .tab {
-	padding: calc(var(--margin) / 2) 0;
-	background: var(--bg);
+	padding: calc(var(--MI-margin) / 2) 0;
+	background: var(--MI_THEME-bg);
 }
 
 .tl {
-	background: var(--bg);
-	border-radius: var(--radius);
+	background: var(--MI_THEME-bg);
+	border-radius: var(--MI-radius);
 	overflow: clip;
 }
 </style>

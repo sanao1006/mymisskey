@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: syuilo and other misskey contributors
+ * SPDX-FileCopyrightText: syuilo and misskey-project
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
@@ -15,7 +15,14 @@ import type { LoggerService } from '@/core/LoggerService.js';
 import type { MetaService } from '@/core/MetaService.js';
 import type { UtilityService } from '@/core/UtilityService.js';
 import { bindThis } from '@/decorators.js';
-import type { NoteReactionsRepository, NotesRepository, PollsRepository, UsersRepository, FollowRequestsRepository } from '@/models/_.js';
+import type {
+	FollowRequestsRepository,
+	MiMeta,
+	NoteReactionsRepository,
+	NotesRepository,
+	PollsRepository,
+	UsersRepository,
+} from '@/models/_.js';
 
 type MockResponse = {
 	type: string;
@@ -29,6 +36,7 @@ export class MockResolver extends Resolver {
 	constructor(loggerService: LoggerService) {
 		super(
 			{} as Config,
+			{} as MiMeta,
 			{} as UsersRepository,
 			{} as NotesRepository,
 			{} as PollsRepository,
@@ -36,7 +44,6 @@ export class MockResolver extends Resolver {
 			{} as FollowRequestsRepository,
 			{} as UtilityService,
 			{} as InstanceActorService,
-			{} as MetaService,
 			{} as ApRequestService,
 			{} as HttpRequestService,
 			{} as ApRendererService,

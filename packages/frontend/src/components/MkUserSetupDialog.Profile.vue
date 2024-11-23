@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -39,7 +39,9 @@ import FormSlot from '@/components/form/slot.vue';
 import MkInfo from '@/components/MkInfo.vue';
 import { chooseFileFromPc } from '@/scripts/select-file.js';
 import * as os from '@/os.js';
-import { $i } from '@/account.js';
+import { signinRequired } from '@/account.js';
+
+const $i = signinRequired();
 
 const name = ref($i.name ?? '');
 const description = ref($i.description ?? '');
@@ -49,6 +51,11 @@ watch(name, () => {
 		// 空文字列をnullにしたいので??は使うな
 		// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 		name: name.value || null,
+	}, undefined, {
+		'0b3f9f6a-2f4d-4b1f-9fb4-49d3a2fd7191': {
+			title: i18n.ts.yourNameContainsProhibitedWords,
+			text: i18n.ts.yourNameContainsProhibitedWordsDescription,
+		},
 	});
 });
 
@@ -68,7 +75,7 @@ function setAvatar(ev) {
 
 		const { canceled } = await os.confirm({
 			type: 'question',
-			text: i18n.t('cropImageAsk'),
+			text: i18n.ts.cropImageAsk,
 			okText: i18n.ts.cropYes,
 			cancelText: i18n.ts.cropNo,
 		});

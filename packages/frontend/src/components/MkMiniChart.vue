@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -22,8 +22,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 		stroke-width="2"
 	/>
 	<circle
-		:cx="headX"
-		:cy="headY"
+		:cx="headX ?? undefined"
+		:cy="headY ?? undefined"
 		r="3"
 		:fill="color"
 	/>
@@ -34,7 +34,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { watch, ref } from 'vue';
 import { v4 as uuid } from 'uuid';
 import tinycolor from 'tinycolor2';
-import { useInterval } from '@/scripts/use-interval.js';
+import { useInterval } from '@@/js/use-interval.js';
 
 const props = defineProps<{
 	src: number[];
@@ -48,7 +48,7 @@ const polygonPoints = ref('');
 const headX = ref<number | null>(null);
 const headY = ref<number | null>(null);
 const clock = ref<number | null>(null);
-const accent = tinycolor(getComputedStyle(document.documentElement).getPropertyValue('--accent'));
+const accent = tinycolor(getComputedStyle(document.documentElement).getPropertyValue('--MI_THEME-accent'));
 const color = accent.toRgbString();
 
 function draw(): void {

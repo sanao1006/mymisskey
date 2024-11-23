@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -56,17 +56,17 @@ defineExpose({
 .root {
 	&.noGap {
 		> .notes {
-			background: var(--panel);
+			background: var(--MI_THEME-panel);
 		}
 	}
 
 	&:not(.noGap) {
 		> .notes {
-			background: var(--bg);
+			background: var(--MI_THEME-bg);
 
 			.note {
-				background: var(--panel);
-				border-radius: var(--radius);
+				background: var(--MI_THEME-panel);
+				border-radius: var(--MI-radius);
 			}
 		}
 	}

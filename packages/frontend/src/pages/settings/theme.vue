@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -88,6 +88,8 @@ import { uniqueBy } from '@/scripts/array.js';
 import { fetchThemes, getThemes } from '@/theme-store.js';
 import { definePageMetadata } from '@/scripts/page-metadata.js';
 import { miLocalStorage } from '@/local-storage.js';
+import { reloadAsk } from '@/scripts/reload-ask.js';
+import * as os from '@/os.js';
 
 const installedThemes = ref(getThemes());
 const builtinThemes = getBuiltinThemesRef();
@@ -124,6 +126,7 @@ const lightThemeId = computed({
 		}
 	},
 });
+
 const darkMode = computed(defaultStore.makeGetterSetter('darkMode'));
 const syncDeviceDarkMode = computed(ColdDeviceStorage.makeGetterSetter('syncDeviceDarkMode'));
 const wallpaper = ref(miLocalStorage.getItem('wallpaper'));
@@ -135,13 +138,13 @@ watch(syncDeviceDarkMode, () => {
 	}
 });
 
-watch(wallpaper, () => {
+watch(wallpaper, async () => {
 	if (wallpaper.value == null) {
 		miLocalStorage.removeItem('wallpaper');
 	} else {
 		miLocalStorage.setItem('wallpaper', wallpaper.value);
 	}
-	location.reload();
+	await reloadAsk({ reason: i18n.ts.reloadToApplySetting, unison: true });
 });
 
 onActivated(() => {
@@ -164,10 +167,10 @@ const headerActions = computed(() => []);
 
 const headerTabs = computed(() => []);
 
-definePageMetadata({
+definePageMetadata(() => ({
 	title: i18n.ts.theme,
 	icon: 'ti ti-palette',
-});
+}));
 </script>
 
 <style lang="scss" scoped>
@@ -200,12 +203,18 @@ definePageMetadata({
 			}
 		}
 
+		.dn:focus-visible ~ .toggle {
+			outline: 2px solid var(--MI_THEME-focus);
+			outline-offset: 2px;
+		}
+
 		.toggle {
 			cursor: pointer;
 			display: inline-block;
 			position: relative;
 			width: 90px;
 			height: 50px;
+			margin: 4px; // focus用のアウトライン
 			background-color: #83D8FF;
 			border-radius: 90px - 6;
 			transition: background-color 200ms cubic-bezier(0.445, 0.05, 0.55, 0.95) !important;
@@ -218,12 +227,12 @@ definePageMetadata({
 
 			> .before {
 				left: -70px;
-				color: var(--accent);
+				color: var(--MI_THEME-accent);
 			}
 
 			> .after {
 				right: -68px;
-				color: var(--fg);
+				color: var(--MI_THEME-fg);
 			}
 		}
 
@@ -341,11 +350,11 @@ definePageMetadata({
 				background-color: #749DD6;
 
 				> .before {
-					color: var(--fg);
+					color: var(--MI_THEME-fg);
 				}
 
 				> .after {
-					color: var(--accent);
+					color: var(--MI_THEME-accent);
 				}
 
 				.toggle__handler {
@@ -396,14 +405,14 @@ definePageMetadata({
 
 	> .sync {
 		padding: 14px 16px;
-		border-top: solid 0.5px var(--divider);
+		border-top: solid 0.5px var(--MI_THEME-divider);
 	}
 }
 
 .rsljpzjq {
 	> .selects {
 		display: flex;
-		gap: 1.5em var(--margin);
+		gap: 1.5em var(--MI-margin);
 		flex-wrap: wrap;
 
 		> .select {

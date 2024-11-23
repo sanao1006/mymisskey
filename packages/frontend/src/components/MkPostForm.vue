@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -65,10 +65,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 	</div>
 	<MkInfo v-if="hasNotSpecifiedMentions" warn :class="$style.hasNotSpecifiedMentions">{{ i18n.ts.notSpecifiedMentionWarning }} - <button class="_textButton" @click="addMissingMention()">{{ i18n.ts.add }}</button></MkInfo>
-	<input v-show="useCw" ref="cwInputEl" v-model="cw" :class="$style.cw" :placeholder="i18n.ts.annotation" @keydown="onKeydown">
+	<input v-show="useCw" ref="cwInputEl" v-model="cw" :class="$style.cw" :placeholder="i18n.ts.annotation" @keydown="onKeydown" @keyup="onKeyup" @compositionend="onCompositionEnd">
 	<div :class="[$style.textOuter, { [$style.withCw]: useCw }]">
 		<div v-if="channel" :class="$style.colorBar" :style="{ background: channel.color }"></div>
-		<textarea ref="textareaEl" v-model="text" :class="[$style.text]" :disabled="posting || posted" :readonly="textAreaReadOnly" :placeholder="placeholder" data-cy-post-form-text @keydown="onKeydown" @paste="onPaste" @compositionupdate="onCompositionUpdate" @compositionend="onCompositionEnd"/>
+		<textarea ref="textareaEl" v-model="text" :class="[$style.text]" :disabled="posting || posted" :readonly="textAreaReadOnly" :placeholder="placeholder" data-cy-post-form-text @keydown="onKeydown" @keyup="onKeyup" @paste="onPaste" @compositionupdate="onCompositionUpdate" @compositionend="onCompositionEnd"/>
 		<div v-if="maxTextLength - textLength < 100" :class="['_acrylic', $style.textCount, { [$style.textOver]: textLength > maxTextLength }]">{{ maxTextLength - textLength }}</div>
 	</div>
 	<input v-show="withHashtags" ref="hashtagsInputEl" v-model="hashtags" :class="$style.hashtags" :placeholder="i18n.ts.hashtags" list="hashtags">
@@ -84,7 +84,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<button v-tooltip="i18n.ts.useCw" class="_button" :class="[$style.footerButton, { [$style.footerButtonActive]: useCw }]" @click="useCw = !useCw"><i class="ti ti-eye-off"></i></button>
 			<button v-tooltip="i18n.ts.mention" class="_button" :class="$style.footerButton" @click="insertMention"><i class="ti ti-at"></i></button>
 			<button v-tooltip="i18n.ts.hashtags" class="_button" :class="[$style.footerButton, { [$style.footerButtonActive]: withHashtags }]" @click="withHashtags = !withHashtags"><i class="ti ti-hash"></i></button>
-			<button v-if="postFormActions.length > 0" v-tooltip="i18n.ts.plugin" class="_button" :class="$style.footerButton" @click="showActions"><i class="ti ti-plug"></i></button>
+			<button v-if="postFormActions.length > 0" v-tooltip="i18n.ts.plugins" class="_button" :class="$style.footerButton" @click="showActions"><i class="ti ti-plug"></i></button>
 			<button v-tooltip="i18n.ts.emoji" :class="['_button', $style.footerButton]" @click="insertEmoji"><i class="ti ti-mood-happy"></i></button>
 			<button v-if="showAddMfmFunction" v-tooltip="i18n.ts.addMfmFunction" :class="['_button', $style.footerButton]" @click="insertMfmFunction"><i class="ti ti-palette"></i></button>
 		</div>
@@ -105,22 +105,23 @@ import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
 import insertTextAtCursor from 'insert-text-at-cursor';
 import { toASCII } from 'punycode/';
+import { host, url } from '@@/js/config.js';
 import MkNoteSimple from '@/components/MkNoteSimple.vue';
 import MkNotePreview from '@/components/MkNotePreview.vue';
 import XPostFormAttaches from '@/components/MkPostFormAttaches.vue';
-import MkPollEditor from '@/components/MkPollEditor.vue';
-import { host, url } from '@/config.js';
+import MkPollEditor, { type PollEditorModelValue } from '@/components/MkPollEditor.vue';
 import { erase, unique } from '@/scripts/array.js';
 import { extractMentions } from '@/scripts/extract-mentions.js';
 import { formatTimeString } from '@/scripts/format-time-string.js';
 import { Autocomplete } from '@/scripts/autocomplete.js';
 import * as os from '@/os.js';
+import { misskeyApi } from '@/scripts/misskey-api.js';
 import { selectFiles } from '@/scripts/select-file.js';
 import { defaultStore, notePostInterruptors, postFormActions } from '@/store.js';
 import MkInfo from '@/components/MkInfo.vue';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
-import { $i, notesCount, incNotesCount, getAccounts, openAccountMenu as openAccountMenu_ } from '@/account.js';
+import { signinRequired, notesCount, incNotesCount, getAccounts, openAccountMenu as openAccountMenu_ } from '@/account.js';
 import { uploadFile } from '@/scripts/upload.js';
 import { deepClone } from '@/scripts/clone.js';
 import MkRippleEffect from '@/components/MkRippleEffect.vue';
@@ -128,23 +129,13 @@ import { miLocalStorage } from '@/local-storage.js';
 import { claimAchievement } from '@/scripts/achievements.js';
 import { emojiPicker } from '@/scripts/emoji-picker.js';
 import { mfmFunctionPicker } from '@/scripts/mfm-function-picker.js';
+import type { PostFormProps } from '@/types/post-form.js';
+
+const $i = signinRequired();
 
 const modal = inject('modal');
 
-const props = withDefaults(defineProps<{
-	reply?: Misskey.entities.Note;
-	renote?: Misskey.entities.Note;
-	channel?: Misskey.entities.Channel; // TODO
-	mention?: Misskey.entities.User;
-	specified?: Misskey.entities.User;
-	initialText?: string;
-	initialCw?: string;
-	initialVisibility?: (typeof Misskey.noteVisibilities)[number];
-	initialFiles?: Misskey.entities.DriveFile[];
-	initialLocalOnly?: boolean;
-	initialVisibleUsers?: Misskey.entities.User[];
-	initialNote?: Misskey.entities.Note;
-	instant?: boolean;
+const props = withDefaults(defineProps<PostFormProps & {
 	fixed?: boolean;
 	autofocus?: boolean;
 	freezeAfterPosted?: boolean;
@@ -153,6 +144,7 @@ const props = withDefaults(defineProps<{
 	initialVisibleUsers: () => [],
 	autofocus: true,
 	mock: false,
+	initialLocalOnly: undefined,
 });
 
 provide('mock', props.mock);
@@ -169,29 +161,24 @@ const emit = defineEmits<{
 const textareaEl = shallowRef<HTMLTextAreaElement | null>(null);
 const cwInputEl = shallowRef<HTMLInputElement | null>(null);
 const hashtagsInputEl = shallowRef<HTMLInputElement | null>(null);
-const visibilityButton = shallowRef<HTMLElement | null>(null);
+const visibilityButton = shallowRef<HTMLElement>();
 
 const posting = ref(false);
 const posted = ref(false);
 const text = ref(props.initialText ?? '');
 const files = ref(props.initialFiles ?? []);
-const poll = ref<{
-	choices: string[];
-	multiple: boolean;
-	expiresAt: string | null;
-	expiredAfter: string | null;
-} | null>(null);
+const poll = ref<PollEditorModelValue | null>(null);
 const useCw = ref<boolean>(!!props.initialCw);
 const showPreview = ref(defaultStore.state.showPreview);
 watch(showPreview, () => defaultStore.set('showPreview', showPreview.value));
 const showAddMfmFunction = ref(defaultStore.state.enableQuickAddMfmFunction);
 watch(showAddMfmFunction, () => defaultStore.set('enableQuickAddMfmFunction', showAddMfmFunction.value));
 const cw = ref<string | null>(props.initialCw ?? null);
-const localOnly = ref<boolean>(props.initialLocalOnly ?? defaultStore.state.rememberNoteVisibility ? defaultStore.state.localOnly : defaultStore.state.defaultNoteLocalOnly);
-const visibility = ref(props.initialVisibility ?? (defaultStore.state.rememberNoteVisibility ? defaultStore.state.visibility : defaultStore.state.defaultNoteVisibility) as typeof Misskey.noteVisibilities[number]);
+const localOnly = ref(props.initialLocalOnly ?? (defaultStore.state.rememberNoteVisibility ? defaultStore.state.localOnly : defaultStore.state.defaultNoteLocalOnly));
+const visibility = ref(props.initialVisibility ?? (defaultStore.state.rememberNoteVisibility ? defaultStore.state.visibility : defaultStore.state.defaultNoteVisibility));
 const visibleUsers = ref<Misskey.entities.UserDetailed[]>([]);
 if (props.initialVisibleUsers) {
-	props.initialVisibleUsers.forEach(pushVisibleUser);
+	props.initialVisibleUsers.forEach(u => pushVisibleUser(u));
 }
 const reactionAcceptance = ref(defaultStore.state.reactionAcceptance);
 const autocomplete = ref(null);
@@ -202,6 +189,7 @@ const recentHashtags = ref(JSON.parse(miLocalStorage.getItem('hashtags') ?? '[]'
 const imeText = ref('');
 const showingOptions = ref(false);
 const textAreaReadOnly = ref(false);
+const justEndedComposition = ref(false);
 
 const draftKey = computed((): string => {
 	let key = props.channel ? `channel:${props.channel.id}` : '';
@@ -246,7 +234,7 @@ const submitText = computed((): string => {
 });
 
 const textLength = computed((): number => {
-	return (text.value + imeText.value).trim().length;
+	return (text.value + imeText.value).length;
 });
 
 const maxTextLength = computed((): number => {
@@ -255,7 +243,13 @@ const maxTextLength = computed((): number => {
 
 const canPost = computed((): boolean => {
 	return !props.mock && !posting.value && !posted.value &&
-		(1 <= textLength.value || 1 <= files.value.length || !!poll.value || !!props.renote) &&
+		(
+			1 <= textLength.value ||
+			1 <= files.value.length ||
+			poll.value != null ||
+			props.renote != null ||
+			quoteId.value != null
+		) &&
 		(textLength.value <= maxTextLength.value) &&
 		(!poll.value || poll.value.choices.length >= 2);
 });
@@ -307,7 +301,7 @@ if (props.reply && props.reply.text != null) {
 	}
 }
 
-if ($i?.isSilenced && visibility.value === 'public') {
+if ($i.isSilenced && visibility.value === 'public') {
 	visibility.value = 'home';
 }
 
@@ -328,15 +322,15 @@ if (props.reply && ['home', 'followers', 'specified'].includes(props.reply.visib
 
 	if (visibility.value === 'specified') {
 		if (props.reply.visibleUserIds) {
-			os.api('users/show', {
-				userIds: props.reply.visibleUserIds.filter(uid => uid !== $i.id && uid !== props.reply.userId),
+			misskeyApi('users/show', {
+				userIds: props.reply.visibleUserIds.filter(uid => uid !== $i.id && uid !== props.reply?.userId),
 			}).then(users => {
-				users.forEach(pushVisibleUser);
+				users.forEach(u => pushVisibleUser(u));
 			});
 		}
 
 		if (props.reply.userId !== $i.id) {
-			os.api('users/show', { userId: props.reply.userId }).then(user => {
+			misskeyApi('users/show', { userId: props.reply.userId }).then(user => {
 				pushVisibleUser(user);
 			});
 		}
@@ -362,6 +356,8 @@ function watchForDraft() {
 	watch(files, () => saveDraft(), { deep: true });
 	watch(visibility, () => saveDraft());
 	watch(localOnly, () => saveDraft());
+	watch(quoteId, () => saveDraft());
+	watch(reactionAcceptance, () => saveDraft());
 }
 
 function checkMissingMention() {
@@ -383,8 +379,8 @@ function addMissingMention() {
 
 	for (const x of extractMentions(ast)) {
 		if (!visibleUsers.value.some(u => (u.username === x.username) && (u.host === x.host))) {
-			os.api('users/show', { username: x.username, host: x.host }).then(user => {
-				visibleUsers.value.push(user);
+			misskeyApi('users/show', { username: x.username, host: x.host }).then(user => {
+				pushVisibleUser(user);
 			});
 		}
 	}
@@ -458,11 +454,12 @@ function setVisibility() {
 		return;
 	}
 
-	os.popup(defineAsyncComponent(() => import('@/components/MkVisibilityPicker.vue')), {
+	const { dispose } = os.popup(defineAsyncComponent(() => import('@/components/MkVisibilityPicker.vue')), {
 		currentVisibility: visibility.value,
-		isSilenced: $i?.isSilenced,
+		isSilenced: $i.isSilenced,
 		localOnly: localOnly.value,
 		src: visibilityButton.value,
+		...(props.reply ? { isReplyVisibilitySpecified: props.reply.visibility === 'specified' } : {}),
 	}, {
 		changeVisibility: v => {
 			visibility.value = v;
@@ -470,7 +467,8 @@ function setVisibility() {
 				defaultStore.set('visibility', visibility.value);
 			}
 		},
-	}, 'closed');
+		closed: () => dispose(),
+	});
 }
 
 async function toggleLocalOnly() {
@@ -513,6 +511,9 @@ async function toggleLocalOnly() {
 	}
 
 	localOnly.value = !localOnly.value;
+	if (defaultStore.state.rememberNoteVisibility) {
+		defaultStore.set('localOnly', localOnly.value);
+	}
 }
 
 async function toggleReactionAcceptance() {
@@ -531,7 +532,7 @@ async function toggleReactionAcceptance() {
 	reactionAcceptance.value = select.result;
 }
 
-function pushVisibleUser(user) {
+function pushVisibleUser(user: Misskey.entities.UserDetailed) {
 	if (!visibleUsers.value.some(u => u.username === user.username && u.host === user.host)) {
 		visibleUsers.value.push(user);
 	}
@@ -560,7 +561,14 @@ function clear() {
 
 function onKeydown(ev: KeyboardEvent) {
 	if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey) && canPost.value) post();
-	if (ev.key === 'Escape') emit('esc');
+
+	// justEndedComposition.value is for Safari, which keyDown occurs after compositionend.
+	// ev.isComposing is for another browsers.
+	if (ev.key === 'Escape' && !justEndedComposition.value && !ev.isComposing) emit('esc');
+}
+
+function onKeyup(ev: KeyboardEvent) {
+	justEndedComposition.value = false;
 }
 
 function onCompositionUpdate(ev: CompositionEvent) {
@@ -569,14 +577,17 @@ function onCompositionUpdate(ev: CompositionEvent) {
 
 function onCompositionEnd(ev: CompositionEvent) {
 	imeText.value = '';
+	justEndedComposition.value = true;
 }
 
 async function onPaste(ev: ClipboardEvent) {
 	if (props.mock) return;
+	if (!ev.clipboardData) return;
 
-	for (const { item, i } of Array.from(ev.clipboardData.items, (item, i) => ({ item, i }))) {
+	for (const { item, i } of Array.from(ev.clipboardData.items, (data, x) => ({ item: data, i: x }))) {
 		if (item.kind === 'file') {
 			const file = item.getAsFile();
+			if (!file) continue;
 			const lio = file.name.lastIndexOf('.');
 			const ext = lio >= 0 ? file.name.slice(lio) : '';
 			const formatted = `${formatTimeString(new Date(file.lastModified), defaultStore.state.pastedFileName).replace(/{{number}}/g, `${i + 1}`)}${ext}`;
@@ -598,7 +609,24 @@ async function onPaste(ev: ClipboardEvent) {
 				return;
 			}
 
-			quoteId.value = paste.substring(url.length).match(/^\/notes\/(.+?)\/?$/)[1];
+			quoteId.value = paste.substring(url.length).match(/^\/notes\/(.+?)\/?$/)?.[1] ?? null;
+		});
+	}
+
+	if (paste.length > 1000) {
+		ev.preventDefault();
+		os.confirm({
+			type: 'info',
+			text: i18n.ts.attachAsFileQuestion,
+		}).then(({ canceled }) => {
+			if (canceled) {
+				insertTextAtCursor(textareaEl.value, paste);
+				return;
+			}
+
+			const fileName = formatTimeString(new Date(), defaultStore.state.pastedFileName).replace(/{{number}}/g, '0');
+			const file = new File([paste], `${fileName}.txt`, { type: 'text/plain' });
+			upload(file, `${fileName}.txt`);
 		});
 	}
 }
@@ -629,26 +657,26 @@ function onDragover(ev) {
 	}
 }
 
-function onDragenter(ev) {
+function onDragenter() {
 	draghover.value = true;
 }
 
-function onDragleave(ev) {
+function onDragleave() {
 	draghover.value = false;
 }
 
-function onDrop(ev): void {
+function onDrop(ev: DragEvent): void {
 	draghover.value = false;
 
 	// ファイルだったら
-	if (ev.dataTransfer.files.length > 0) {
+	if (ev.dataTransfer && ev.dataTransfer.files.length > 0) {
 		ev.preventDefault();
 		for (const x of Array.from(ev.dataTransfer.files)) upload(x);
 		return;
 	}
 
 	//#region ドライブのファイル
-	const driveFile = ev.dataTransfer.getData(_DATA_TRANSFER_DRIVE_FILE_);
+	const driveFile = ev.dataTransfer?.getData(_DATA_TRANSFER_DRIVE_FILE_);
 	if (driveFile != null && driveFile !== '') {
 		const file = JSON.parse(driveFile);
 		files.value.push(file);
@@ -672,6 +700,9 @@ function saveDraft() {
 			localOnly: localOnly.value,
 			files: files.value,
 			poll: poll.value,
+			visibleUserIds: visibility.value === 'specified' ? visibleUsers.value.map(x => x.id) : undefined,
+			quoteId: quoteId.value,
+			reactionAcceptance: reactionAcceptance.value,
 		},
 	};
 
@@ -696,11 +727,16 @@ async function post(ev?: MouseEvent) {
 	}
 
 	if (ev) {
-		const el = ev.currentTarget ?? ev.target;
-		const rect = el.getBoundingClientRect();
-		const x = rect.left + (el.offsetWidth / 2);
-		const y = rect.top + (el.offsetHeight / 2);
-		os.popup(MkRippleEffect, { x, y }, {}, 'end');
+		const el = (ev.currentTarget ?? ev.target) as HTMLElement | null;
+
+		if (el) {
+			const rect = el.getBoundingClientRect();
+			const x = rect.left + (el.offsetWidth / 2);
+			const y = rect.top + (el.offsetHeight / 2);
+			const { dispose } = os.popup(MkRippleEffect, { x, y }, {
+				end: () => dispose(),
+			});
+		}
 	}
 
 	if (props.mock) return;
@@ -752,29 +788,39 @@ async function post(ev?: MouseEvent) {
 
 	if (withHashtags.value && hashtags.value && hashtags.value.trim() !== '') {
 		const hashtags_ = hashtags.value.trim().split(' ').map(x => x.startsWith('#') ? x : '#' + x).join(' ');
-		postData.text = postData.text ? `${postData.text} ${hashtags_}` : hashtags_;
+		if (!postData.text) {
+			postData.text = hashtags_;
+		} else {
+			const postTextLines = postData.text.split('\n');
+			if (postTextLines[postTextLines.length - 1].trim() === '') {
+				postTextLines[postTextLines.length - 1] += hashtags_;
+			} else {
+				postTextLines[postTextLines.length - 1] += ' ' + hashtags_;
+			}
+			postData.text = postTextLines.join('\n');
+		}
 	}
 
 	// plugin
 	if (notePostInterruptors.length > 0) {
 		for (const interruptor of notePostInterruptors) {
 			try {
-				postData = await interruptor.handler(deepClone(postData));
+				postData = await interruptor.handler(deepClone(postData)) as typeof postData;
 			} catch (err) {
 				console.error(err);
 			}
 		}
 	}
 
-	let token = undefined;
+	let token: string | undefined = undefined;
 
 	if (postAccount.value) {
 		const storedAccounts = await getAccounts();
-		token = storedAccounts.find(x => x.id === postAccount.value.id)?.token;
+		token = storedAccounts.find(x => x.id === postAccount.value?.id)?.token;
 	}
 
 	posting.value = true;
-	os.api('notes/create', postData, token).then(() => {
+	misskeyApi('notes/create', postData, token).then(() => {
 		if (props.freezeAfterPosted) {
 			posted.value = true;
 		} else {
@@ -784,7 +830,7 @@ async function post(ev?: MouseEvent) {
 			deleteDraft();
 			emit('posted');
 			if (postData.text && postData.text !== '') {
-				const hashtags_ = mfm.parse(postData.text).filter(x => x.type === 'hashtag').map(x => x.props.hashtag);
+				const hashtags_ = mfm.parse(postData.text).map(x => x.type === 'hashtag' && x.props.hashtag).filter(x => x) as string[];
 				const history = JSON.parse(miLocalStorage.getItem('hashtags') ?? '[]') as string[];
 				miLocalStorage.setItem('hashtags', JSON.stringify(unique(hashtags_.concat(history))));
 			}
@@ -847,18 +893,32 @@ function cancel() {
 }
 
 function insertMention() {
-	os.selectUser().then(user => {
+	os.selectUser({ localOnly: localOnly.value, includeSelf: true }).then(user => {
 		insertTextAtCursor(textareaEl.value, '@' + Misskey.acct.toString(user) + ' ');
 	});
 }
 
 async function insertEmoji(ev: MouseEvent) {
 	textAreaReadOnly.value = true;
+	const target = ev.currentTarget ?? ev.target;
+	if (target == null) return;
 
+	// emojiPickerはダイアログが閉じずにtextareaとやりとりするので、
+	// focustrapをかけているとinsertTextAtCursorが効かない
+	// そのため、投稿フォームのテキストに直接注入する
+	// See: https://github.com/misskey-dev/misskey/pull/14282
+	//      https://github.com/misskey-dev/misskey/issues/14274
+
+	let pos = textareaEl.value?.selectionStart ?? 0;
+	let posEnd = textareaEl.value?.selectionEnd ?? text.value.length;
 	emojiPicker.show(
-		ev.currentTarget ?? ev.target,
+		target as HTMLElement,
 		emoji => {
-			insertTextAtCursor(textareaEl.value, emoji);
+			const textBefore = text.value.substring(0, pos);
+			const textAfter = text.value.substring(posEnd);
+			text.value = textBefore + emoji + textAfter;
+			pos += emoji.length;
+			posEnd += emoji.length;
 		},
 		() => {
 			textAreaReadOnly.value = false;
@@ -868,6 +928,7 @@ async function insertEmoji(ev: MouseEvent) {
 }
 
 async function insertMfmFunction(ev: MouseEvent) {
+	if (textareaEl.value == null) return;
 	mfmFunctionPicker(
 		ev.currentTarget ?? ev.target,
 		textareaEl.value,
@@ -875,7 +936,7 @@ async function insertMfmFunction(ev: MouseEvent) {
 	);
 }
 
-function showActions(ev) {
+function showActions(ev: MouseEvent) {
 	os.popupMenu(postFormActions.map(action => ({
 		text: action.title,
 		action: () => {
@@ -883,6 +944,7 @@ function showActions(ev) {
 				text: text.value,
 				cw: cw.value,
 			}, (key, value) => {
+				if (typeof key !== 'string' || typeof value !== 'string') return;
 				if (key === 'text') { text.value = value; }
 				if (key === 'cw') { useCw.value = value !== null; cw.value = value; }
 			});
@@ -919,9 +981,9 @@ onMounted(() => {
 	}
 
 	// TODO: detach when unmount
-	new Autocomplete(textareaEl.value, text);
-	new Autocomplete(cwInputEl.value, cw);
-	new Autocomplete(hashtagsInputEl.value, hashtags);
+	if (textareaEl.value) new Autocomplete(textareaEl.value, text);
+	if (cwInputEl.value) new Autocomplete(cwInputEl.value, cw);
+	if (hashtagsInputEl.value) new Autocomplete(hashtagsInputEl.value, hashtags);
 
 	nextTick(() => {
 		// 書きかけの投稿を復元
@@ -937,6 +999,13 @@ onMounted(() => {
 				if (draft.data.poll) {
 					poll.value = draft.data.poll;
 				}
+				if (draft.data.visibleUserIds) {
+					misskeyApi('users/show', { userIds: draft.data.visibleUserIds }).then(users => {
+						users.forEach(u => pushVisibleUser(u));
+					});
+				}
+				quoteId.value = draft.data.quoteId;
+				reactionAcceptance.value = draft.data.reactionAcceptance;
 			}
 		}
 
@@ -944,20 +1013,26 @@ onMounted(() => {
 		if (props.initialNote) {
 			const init = props.initialNote;
 			text.value = init.text ? init.text : '';
-			files.value = init.files;
-			cw.value = init.cw;
 			useCw.value = init.cw != null;
+			cw.value = init.cw ?? null;
+			visibility.value = init.visibility;
+			localOnly.value = init.localOnly ?? false;
+			files.value = init.files ?? [];
 			if (init.poll) {
 				poll.value = {
 					choices: init.poll.choices.map(x => x.text),
 					multiple: init.poll.multiple,
-					expiresAt: init.poll.expiresAt,
-					expiredAfter: init.poll.expiredAfter,
+					expiresAt: init.poll.expiresAt ? (new Date(init.poll.expiresAt)).getTime() : null,
+					expiredAfter: null,
 				};
 			}
-			visibility.value = init.visibility;
-			localOnly.value = init.localOnly;
+			if (init.visibleUserIds) {
+				misskeyApi('users/show', { userIds: init.visibleUserIds }).then(users => {
+					users.forEach(u => pushVisibleUser(u));
+				});
+			}
 			quoteId.value = init.renote ? init.renote.id : null;
+			reactionAcceptance.value = init.reactionAcceptance;
 		}
 
 		nextTick(() => watchForDraft());
@@ -1030,6 +1105,15 @@ defineExpose({
 	margin: 12px 12px 12px 6px;
 	vertical-align: bottom;
 
+	&:focus-visible {
+		outline: none;
+
+		> .submitInner {
+			outline: 2px solid var(--MI_THEME-fgOnAccent);
+			outline-offset: -4px;
+		}
+	}
+
 	&:disabled {
 		opacity: 0.7;
 	}
@@ -1039,14 +1123,14 @@ defineExpose({
 	}
 
 	&:not(:disabled):hover {
-		> .inner {
-			background: linear-gradient(90deg, var(--X8), var(--X8));
+		> .submitInner {
+			background: linear-gradient(90deg, hsl(from var(--MI_THEME-accent) h s calc(l + 5)), hsl(from var(--MI_THEME-accent) h s calc(l + 5)));
 		}
 	}
 
 	&:not(:disabled):active {
-		> .inner {
-			background: linear-gradient(90deg, var(--X8), var(--X8));
+		> .submitInner {
+			background: linear-gradient(90deg, hsl(from var(--MI_THEME-accent) h s calc(l + 5)), hsl(from var(--MI_THEME-accent) h s calc(l + 5)));
 		}
 	}
 }
@@ -1068,8 +1152,8 @@ defineExpose({
 	border-radius: 6px;
 	min-width: 90px;
 	box-sizing: border-box;
-	color: var(--fgOnAccent);
-	background: linear-gradient(90deg, var(--buttonGradateA), var(--buttonGradateB));
+	color: var(--MI_THEME-fgOnAccent);
+	background: linear-gradient(90deg, var(--MI_THEME-buttonGradateA), var(--MI_THEME-buttonGradateB));
 }
 
 .headerRightItem {
@@ -1078,7 +1162,7 @@ defineExpose({
 	border-radius: 6px;
 
 	&:hover {
-		background: var(--X5);
+		background: var(--MI_THEME-X5);
 	}
 
 	&:disabled {
@@ -1113,6 +1197,15 @@ defineExpose({
 	min-height: 75px;
 	max-height: 150px;
 	overflow: auto;
+	background-size: auto auto;
+}
+
+html[data-color-scheme=dark] .preview {
+	background-image: repeating-linear-gradient(135deg, transparent, transparent 5px, #0004 5px, #0004 10px);
+}
+
+html[data-color-scheme=light] .preview {
+	background-image: repeating-linear-gradient(135deg, transparent, transparent 5px, #00000005 5px, #00000005 10px);
 }
 
 .targetNote {
@@ -1121,7 +1214,7 @@ defineExpose({
 
 .withQuote {
 	margin: 0 0 8px 0;
-	color: var(--accent);
+	color: var(--MI_THEME-accent);
 }
 
 .toSpecified {
@@ -1141,7 +1234,7 @@ defineExpose({
 	margin-right: 14px;
 	padding: 8px 0 8px 8px;
 	border-radius: 8px;
-	background: var(--X4);
+	background: var(--MI_THEME-X4);
 }
 
 .hasNotSpecifiedMentions {
@@ -1160,7 +1253,7 @@ defineExpose({
 	border: none;
 	border-radius: 0;
 	background: transparent;
-	color: var(--fg);
+	color: var(--MI_THEME-fg);
 	font-family: inherit;
 
 	&:focus {
@@ -1175,14 +1268,14 @@ defineExpose({
 .cw {
 	z-index: 1;
 	padding-bottom: 8px;
-	border-bottom: solid 0.5px var(--divider);
+	border-bottom: solid 0.5px var(--MI_THEME-divider);
 }
 
 .hashtags {
 	z-index: 1;
 	padding-top: 8px;
 	padding-bottom: 8px;
-	border-top: solid 0.5px var(--divider);
+	border-top: solid 0.5px var(--MI_THEME-divider);
 }
 
 .textOuter {
@@ -1208,7 +1301,7 @@ defineExpose({
 	right: 2px;
 	padding: 4px 6px;
 	font-size: .9em;
-	color: var(--warn);
+	color: var(--MI_THEME-warn);
 	border-radius: 6px;
 	min-width: 1.6em;
 	text-align: center;
@@ -1252,16 +1345,16 @@ defineExpose({
 	border-radius: 6px;
 
 	&:hover {
-		background: var(--X5);
+		background: var(--MI_THEME-X5);
 	}
 
 	&.footerButtonActive {
-		color: var(--accent);
+		color: var(--MI_THEME-accent);
 	}
 }
 
 .previewButtonActive {
-	color: var(--accent);
+	color: var(--MI_THEME-accent);
 }
 
 @container (max-width: 500px) {

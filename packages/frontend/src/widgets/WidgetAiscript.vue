@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -25,7 +25,7 @@ import { useWidgetPropsManager, WidgetComponentEmits, WidgetComponentExpose, Wid
 import { GetFormResultType } from '@/scripts/form.js';
 import * as os from '@/os.js';
 import MkContainer from '@/components/MkContainer.vue';
-import { createAiScriptEnv } from '@/scripts/aiscript/api.js';
+import { aiScriptReadline, createAiScriptEnv } from '@/scripts/aiscript/api.js';
 import { $i } from '@/account.js';
 import { i18n } from '@/i18n.js';
 
@@ -69,19 +69,7 @@ const run = async () => {
 		storageKey: 'widget',
 		token: $i?.token,
 	}), {
-		in: (q) => {
-			return new Promise(ok => {
-				os.inputText({
-					title: q,
-				}).then(({ canceled, result: a }) => {
-					if (canceled) {
-						ok('');
-					} else {
-						ok(a);
-					}
-				});
-			});
-		},
+		in: aiScriptReadline,
 		out: (value) => {
 			logs.value.push({
 				id: Math.random().toString(),
@@ -138,10 +126,10 @@ defineExpose<WidgetComponentExpose>({
 		max-width: 100%;
 		min-width: 100%;
 		padding: 16px;
-		color: var(--fg);
+		color: var(--MI_THEME-fg);
 		background: transparent;
 		border: none;
-		border-bottom: solid 0.5px var(--divider);
+		border-bottom: solid 0.5px var(--MI_THEME-divider);
 		border-radius: 0;
 		box-sizing: border-box;
 		font: inherit;
@@ -166,7 +154,7 @@ defineExpose<WidgetComponentExpose>({
 	}
 
 	> .logs {
-		border-top: solid 0.5px var(--divider);
+		border-top: solid 0.5px var(--MI_THEME-divider);
 		text-align: left;
 		padding: 16px;
 

@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: syuilo and other misskey contributors
+SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<template #header><XHeader :actions="headerActions"/></template>
 		<MkSpacer :contentMax="900">
 			<div class="_gaps">
-				<div class="inputs" style="display: flex; gap: var(--margin); flex-wrap: wrap;">
+				<div class="inputs" style="display: flex; gap: var(--MI-margin); flex-wrap: wrap;">
 					<MkSelect v-model="origin" style="margin: 0; flex: 1;">
 						<template #label>{{ i18n.ts.instance }}</template>
 						<option value="combined">{{ i18n.ts.all }}</option>
@@ -20,7 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<template #label>{{ i18n.ts.host }}</template>
 					</MkInput>
 				</div>
-				<div class="inputs" style="display: flex; gap: var(--margin); flex-wrap: wrap;">
+				<div class="inputs" style="display: flex; gap: var(--MI-margin); flex-wrap: wrap;">
 					<MkInput v-model="userId" :debounce="true" type="search" style="margin: 0; flex: 1;">
 						<template #label>User ID</template>
 					</MkInput>
@@ -42,6 +42,7 @@ import MkInput from '@/components/MkInput.vue';
 import MkSelect from '@/components/MkSelect.vue';
 import MkFileListForAdmin from '@/components/MkFileListForAdmin.vue';
 import * as os from '@/os.js';
+import { lookupFile } from '@/scripts/admin-lookup.js';
 import { i18n } from '@/i18n.js';
 import { definePageMetadata } from '@/scripts/page-metadata.js';
 
@@ -72,33 +73,10 @@ function clear() {
 	});
 }
 
-function show(file) {
-	os.pageWindow(`/admin/file/${file.id}`);
-}
-
-async function find() {
-	const { canceled, result: q } = await os.inputText({
-		title: i18n.ts.fileIdOrUrl,
-		allowEmpty: false,
-	});
-	if (canceled) return;
-
-	os.api('admin/drive/show-file', q.startsWith('http://') || q.startsWith('https://') ? { url: q.trim() } : { fileId: q.trim() }).then(file => {
-		show(file);
-	}).catch(err => {
-		if (err.code === 'NO_SUCH_FILE') {
-			os.alert({
-				type: 'error',
-				text: i18n.ts.notFound,
-			});
-		}
-	});
-}
-
 const headerActions = computed(() => [{
 	text: i18n.ts.lookup,
 	icon: 'ti ti-search',
-	handler: find,
+	handler: lookupFile,
 }, {
 	text: i18n.ts.clearCachedFiles,
 	icon: 'ti ti-trash',
@@ -107,8 +85,8 @@ const headerActions = computed(() => [{
 
 const headerTabs = computed(() => []);
 
-definePageMetadata(computed(() => ({
+definePageMetadata(() => ({
 	title: i18n.ts.files,
 	icon: 'ti ti-cloud',
-})));
+}));
 </script>
